@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+
+# Authored prose — kept as written, not reflowed.
+plans
+.agents
+.claude
