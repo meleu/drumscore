@@ -46,6 +46,8 @@ export interface NotationRest {
   kind: 'rest';
   step: number;
   value: NoteValue;
+  /** Augmentation dots, matching the note: a dotted-eighth rest covers three sixteenths. */
+  dots: number;
   position: StaffPosition;
 }
 

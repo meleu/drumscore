@@ -20,6 +20,7 @@ export const FIXTURES: readonly Fixture[] = [
   { name: 'straight-eighths', hits: { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14] } },
   { name: 'backbeat', hits: { snare: [4, 12] } },
   { name: 'syncopation', hits: { kick: [0, 3, 6] } },
+  { name: 'dotted-rest', hits: { kick: [3] } },
   { name: 'struck-past-the-beat', hits: { kick: [6, 10] } },
   { name: 'struck-odd-span', hits: { kick: [8, 13] } },
   { name: 'crash-struck', hits: { crash: [0] } },

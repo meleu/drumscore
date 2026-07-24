@@ -46,7 +46,7 @@ function keyOf({ style, position }: Notehead): string {
 function toStaveNote(event: NotationEvent, stemDirection: StemDirection): StaveNote {
   const isRest = event.kind === 'rest';
   // The count feeds the tick math; the glyph is a separate modifier that must be attached.
-  const dots = isRest ? 0 : event.dots;
+  const dots = event.dots;
 
   const note = new StaveNote({
     keys: isRest ? [keyFor(event.position)] : event.noteheads.map(keyOf),

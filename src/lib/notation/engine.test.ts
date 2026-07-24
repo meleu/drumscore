@@ -46,7 +46,7 @@ function rhythm(events: NotationEvent[]): string {
   return events
     .map((event, index) => {
       const separator = index === 0 ? '' : ' ';
-      const dots = event.kind === 'note' ? '.'.repeat(event.dots) : '';
+      const dots = '.'.repeat(event.dots);
 
       return separator + (event.kind === 'rest' ? 'r' : '') + CODES[event.value] + dots;
     })
@@ -132,6 +132,12 @@ describe('toNotation', () => {
       hits: { kick: [0, 3, 6] },
       hands: ['rw', 'rw'],
       feet: ['8. 16 r8 8 rh', 'rw'],
+    },
+    {
+      name: 'silence for three sixteenths from a beat is a dotted-eighth rest',
+      hits: { kick: [3] },
+      hands: ['rw', 'rw'],
+      feet: ['r8. 16 rq rh', 'rw'],
     },
     {
       name: 'a struck hit never sounds past its own beat',
@@ -231,11 +237,7 @@ describe('toNotation', () => {
     for (const { parts } of toNotation(pattern).measures) {
       for (const { events } of parts) {
         // A dot adds half again, so a dotted value covers 1.5x its plain step count.
-        const lengths = events.map((event) => {
-          const dots = event.kind === 'note' ? event.dots : 0;
-
-          return STEPS[event.value] * (2 - 2 ** -dots);
-        });
+        const lengths = events.map((event) => STEPS[event.value] * (2 - 2 ** -event.dots));
         const total = lengths.reduce((sum, steps) => sum + steps, 0);
 
         expect(total).toBe(barLength);
@@ -269,8 +271,8 @@ describe('parts', () => {
     const measure = measureOf(patternWith({}));
 
     expect(measure.parts.map(({ events }) => events)).toEqual([
-      [{ kind: 'rest', step: 0, value: 'whole', position: { step: 'd', octave: 5 } }],
-      [{ kind: 'rest', step: 0, value: 'whole', position: { step: 'g', octave: 4 } }],
+      [{ kind: 'rest', step: 0, value: 'whole', dots: 0, position: { step: 'd', octave: 5 } }],
+      [{ kind: 'rest', step: 0, value: 'whole', dots: 0, position: { step: 'g', octave: 4 } }],
     ]);
   });
 
@@ -278,8 +280,8 @@ describe('parts', () => {
     const hands = partOf(measureOf(patternWith({ snare: [12] })), 'hands');
 
     expect(hands.events).toEqual([
-      { kind: 'rest', step: 0, value: 'half', position: { step: 'b', octave: 4 } },
-      { kind: 'rest', step: 8, value: 'quarter', position: { step: 'b', octave: 4 } },
+      { kind: 'rest', step: 0, value: 'half', dots: 0, position: { step: 'b', octave: 4 } },
+      { kind: 'rest', step: 8, value: 'quarter', dots: 0, position: { step: 'b', octave: 4 } },
       { kind: 'note', step: 12, value: 'quarter', dots: 0, noteheads: [SNARE] },
     ]);
   });

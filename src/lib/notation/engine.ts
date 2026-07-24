@@ -99,20 +99,42 @@ function plainDurations(dimensions: GridDimensions): Duration[] {
 }
 
 /**
- * The plain values plus their dotted forms, longest first.
+ * The dotted form of each plain value, longest first.
  *
  * A dot lengthens a value by half, so a dotted eighth spans three sixteenths — exactly the
  * gap that a bare eighth leaves a rest dangling off. A dotted value aligns to twice its
  * plain length, one binary level coarser: a dotted eighth begins only on a beat, so its
  * borrowed sixteenth falls inside that beat rather than reaching across the next one.
  */
-function noteDurations(dimensions: GridDimensions): Duration[] {
-  const plain = plainDurations(dimensions);
-  const dotted = plain
+function dottedDurations(plain: Duration[]): Duration[] {
+  return plain
     .map(({ value, steps }) => ({ value, dots: 1, steps: steps * 1.5, align: steps * 2 }))
     .filter(({ steps }) => Number.isInteger(steps));
+}
 
-  return [...plain, ...dotted].sort((a, b) => b.steps - a.steps);
+const byLongest = (a: Duration, b: Duration): number => b.steps - a.steps;
+
+/** The plain values plus every dotted form, longest first — the vocabulary for notes. */
+function noteDurations(dimensions: GridDimensions): Duration[] {
+  const plain = plainDurations(dimensions);
+
+  return [...plain, ...dottedDurations(plain)].sort(byLongest);
+}
+
+/**
+ * The plain values plus the dotted forms that fit inside a single beat, longest first.
+ *
+ * A dotted rest reads cleanly only when it stays within one beat, so it never swallows a
+ * beat line the way a dotted half rest across three beats would. That is the same bound a
+ * struck note lives under, so notes and rests dot in step: where a beat's silence is three
+ * sixteenths from its start, it becomes one dotted-eighth rest, not an eighth and a
+ * sixteenth rest.
+ */
+function restDurations(dimensions: GridDimensions): Duration[] {
+  const plain = plainDurations(dimensions);
+  const dotted = dottedDurations(plain).filter(({ steps }) => steps <= dimensions.stepsPerBeat);
+
+  return [...plain, ...dotted].sort(byLongest);
 }
 
 /**
@@ -157,10 +179,11 @@ function split(table: Duration[], step: number, length: number): Piece[] {
 }
 
 function restsFor(table: Duration[], part: Part, step: number, length: number): NotationEvent[] {
-  return split(table, step, length).map(({ step: at, value }) => ({
+  return split(table, step, length).map(({ step: at, value, dots }) => ({
     kind: 'rest',
     step: at,
     value,
+    dots,
     position: value === 'whole' ? part.wholeRestPosition : part.restPosition,
   }));
 }
@@ -258,7 +281,7 @@ function beamsFor(events: NotationEvent[], stepsPerBeat: number): BeamGroup[] {
 }
 
 interface Tables {
-  /** Rests stay undotted, so a silence reads as the plain values it sums to. */
+  /** Rests dot only within a beat, so a silence never hides a beat line. */
   rest: Duration[];
   /** Notes may take a dot, so a struck span reads as one head, not a note and a rest. */
   note: Duration[];
@@ -299,7 +322,7 @@ function partFor(pattern: Pattern, part: Part, bar: number, tables: Tables): Not
 
 export function toNotation(pattern: Pattern): NotationModel {
   const { dimensions } = pattern;
-  const tables: Tables = { rest: plainDurations(dimensions), note: noteDurations(dimensions) };
+  const tables: Tables = { rest: restDurations(dimensions), note: noteDurations(dimensions) };
 
   return {
     timeSignature: { beats: dimensions.beatsPerBar, beatValue: dimensions.beatValue },
