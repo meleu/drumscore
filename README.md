@@ -25,3 +25,10 @@ This project stands on the shoulders of these excellent open source projects:
   ([repo](https://github.com/vexflow/vexflow))
 - [Tone.js](https://tonejs.github.io/) - handles the audio playback
   ([repo](https://github.com/Tonejs/Tone.js))
+- [Bravura](https://github.com/steinbergmedia/bravura) - the music font every
+  notehead, clef and rest is drawn in, by Steinberg Media Technologies
+- [Academico](https://www.npmjs.com/package/@vexflow-fonts/academico) - the text
+  font on the staff, also by Steinberg Media Technologies
+
+Both fonts are bundled with the app under the
+[SIL Open Font License 1.1](https://scripts.sil.org/OFL); see [LICENSE](./LICENSE).

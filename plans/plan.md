@@ -154,7 +154,7 @@ vendoring is a drop-in.
 
 ---
 
-## Phase 11: Bundle notation fonts locally (offline-capable static site)
+## Phase 11: Bundle notation fonts locally (offline-capable static site) — **Done**
 
 **User stories**: 24 (reinforces "fast static page, no wait"); supports the PRD's
 "fully static, no backend" goal.
@@ -167,11 +167,86 @@ holds the first draw until they resolve, but the bytes still come from jsdelivr.
 This phase ships those fonts inside the bundle so the app renders offline with no
 external dependency, and no first-paint dependence on network latency.
 
-- [ ] The two configured fonts (Bravura, Academico) are vendored into the repo/bundle (e.g. from the `@vexflow-fonts` packages) and served from the app's own origin under `base: /drumscore/`.
-- [ ] VexFlow resolves fonts to the local assets, not the CDN (override `Font.HOST_URL` or register the `FontFace`s ourselves before first render); no request to `cdn.jsdelivr.net` occurs at runtime.
-- [ ] `pnpm build` output loads and renders the staff correctly with the network offline / blocked.
-- [ ] Font handling stays isolated to the renderer/Staff boundary; the pure modules remain untouched.
+Vendoring is via the `@vexflow-fonts/*` npm packages resolved through Vite's asset
+pipeline (`?url` import), not files committed by hand: the packages carry
+`LICENSE.txt` and a `README.txt` recording the exact upstream version, so provenance
+and the notice obligation below come along with the dependency instead of relying on
+someone remembering to copy them.
 
-**Unresolved questions**
-- Vendor the woff2 via an npm dependency (`@vexflow-fonts/*`) resolved through Vite's asset pipeline, or commit the files directly under a static assets dir? (Leaning: npm dep + Vite `?url` import, to keep licensing/provenance clear and updates tractable.)
-- Confirm the license terms for Bravura (SIL OFL) and Academico permit redistribution in the bundle — expected fine, worth noting in the repo.
+New module: `src/lib/notation/fonts.ts` — the one place that knows where the fonts
+come from. It maps family → asset URL, empties `Font.HOST_URL` and replaces
+`Font.FILES` with that map (so no CDN path survives), calls `setFonts`, and exports
+`notationFontsReady` for Staff and the visual page to await before their first draw.
+Export embeds from the same map instead of `Font.getURLForFont`, so its bytes are the
+bytes we ship and it no longer depends on VexFlow's host configuration.
+
+**Correction to the premise above:** the CDN fetch was real but redundant, and the
+bundle was already carrying the fonts. `import ... from 'vexflow'` pulls an entry
+point that inlines *six* fonts as base64 data URIs and registers them at import time —
+~790KB of the ~1.4MB `dist/`, four of them (Gonville, Petaluma, Petaluma Script,
+Academico Bold) never drawn here. So the app already rendered offline; what it did not
+do was render *small*, and `Staff`'s `loadFonts` preload then re-fetched Bravura and
+Academico from jsdelivr on top. The fix is to import `vexflow/core` (same library, no
+bundled fonts) everywhere and register only our two. Bundle JS therefore **shrank**
+1416KB → 634KB; with the 270KB of woff2 assets, `dist/` went ~1.4MB → ~912KB. The
+"+19%" projection in the size note below was wrong in sign — measured, this is −35%.
+
+- [x] The two configured fonts (Bravura, Academico) are vendored from the `@vexflow-fonts` packages and served from the app's own origin under `base: /drumscore/`.
+- [x] Regular weights only: `bravura.woff2` and `academico.woff2`. `academico-bold.woff2` is dropped from the bundle entirely (−23KB) and its `@font-face` not registered, unlike the upstream `index.css` which declares both faces. `Font.getURLForFont` returns one URL per family and nothing in the current notation output asks for bold; should VexFlow ever emit bold text, the browser synthesizes it from the regular face rather than fetching anything, so there is no CDN fallback path to reintroduce.
+- [x] VexFlow resolves fonts to the local assets, not the CDN; no request to `cdn.jsdelivr.net` occurs at runtime.
+- [x] `pnpm build` output loads and renders the staff correctly with the network offline / blocked. Verified by serving `dist/` from a plain static server with every non-localhost request aborted in a real browser: staff draws, both faces report loaded, four same-origin requests total, zero to jsdelivr. Export SVG under the same conditions still embeds both faces. (Note for whoever repeats this: `vite preview` is not usable for it — it 404s the built `<script crossorigin>` because of its CORS-mode check. Serve the directory statically, as Pages does.)
+- [x] Font handling stays isolated to the renderer/Staff boundary; the pure modules remain untouched.
+- [x] All 13 `verify:visual` baselines are byte-identical, confirming the `vexflow/core` switch changed nothing about what is drawn.
+
+### Licensing (SIL OFL 1.1)
+
+Both fonts are © Steinberg Media Technologies GmbH under the SIL Open Font License
+1.1, with Reserved Font Names — Bravura 1.392 (from `steinbergmedia/bravura/redist`)
+and Academico 0.902. OFL clause 2 expressly permits bundling and redistributing the
+fonts with any software, so this phase is clear on its face; what follows are the
+attached conditions. Note that publishing to GitHub Pages *is* distribution, and the
+obligations attach to distributing the bytes, not to selling them — a free project
+carries the same duties as a paid one. Note also that clause 2 is satisfied by the
+license text, not by credit: acknowledging Steinberg is welcome but does not discharge
+it.
+
+Two of these items cover ground that already shipped: `src/lib/export.ts` embeds the
+font bytes into every exported SVG (Phase 10), which is itself redistribution.
+
+- [x] Root `LICENSE` (MIT, the project's own choice) carries an explicit carve-out excluding the vendored font files — OFL clause 5 says the Font Software "must not be distributed under any other license", so an unqualified repo-wide MIT would conflict.
+- [x] `package.json` gets `"license": "MIT"`, scoped to our own code and *not* reaching the vendored fonts. npm documents the field as the license of the package's own source, and it does not override the per-directory licensing of vendored third-party material — that is carried by the fonts' own `LICENSE-*.txt` plus the root `LICENSE` carve-out above. Deliberately **not** the SPDX composite `"MIT AND OFL-1.1"`: it would describe the distributed bundle accurately but reads as putting our code under OFL as well. A sibling `"//license"` key says so in the file itself.
+- [x] Each font's `LICENSE.txt` ships **in `dist/`**, at `dist/fonts/<font>/LICENSE.txt`, next to the package's `README.txt` recording the upstream version. A `?url` import emits only the woff2, so a ~20-line `vendoredFontLicenses()` plugin in `vite.config.ts` reads both files out of the installed package at `generateBundle` — tied to the dependency rather than to a hand-copied snapshot. (Belt-and-braces: both woff2 `name` tables already carry the full OFL text and copyright internally, verified by decompressing them, so the bytes are self-documenting even bare. Shipping the text anyway removes the argument.)
+- [x] Exported SVGs carry an XML comment with the copyright and `https://scripts.sil.org/OFL`, since they embed the fonts base64. PNG export needs nothing — it rasterizes, carries no font bytes, and clause 5 explicitly exempts "any document created using the Font Software".
+- [x] README acknowledgements list Bravura and Academico alongside VexFlow and Tone.js (optional, permitted by clause 4, and it documents provenance where people look).
+- [x] The woff2 files are shipped byte-identical. **Do not subset, re-encode, or format-convert them** — see below.
+
+### Bundle size, and why we are not subsetting
+
+*(Written before the phase; superseded on the numbers by the correction above, which
+measured `dist/` shrinking ~1.4MB → ~912KB. The reasoning about subsetting stands.)*
+
+Adding the fonts grows `dist/` by ~264KB (`bravura.woff2` 247,200 B +
+`academico.woff2` 22,704 B; `academico-bold.woff2` is not shipped) against a current
+~1.4MB, so roughly +19%. That is an artifact-size cost, not a
+user-download cost: the browser already fetches those exact bytes from jsdelivr at
+runtime today, blocking the first staff draw until they land. This phase relocates
+the transfer and drops a third-party handshake — woff2 is already Brotli-compressed
+internally, so there is no further gzip difference either way.
+
+Where the bytes actually hurt is export, and that predates this phase: base64
+inflates by 4/3, so an exported SVG is ~330KB of Bravura plus ~30KB of Academico
+around 10KB of notation — about 97% font. Subsetting is the obvious fix, since the
+app draws only a couple dozen distinct glyphs out of Bravura's full SMuFL repertoire,
+and it would plausibly cut that by over 90%.
+
+It is also the one move the license forbids: a subset is a Modified Version, and
+clause 3 bars a Modified Version from using the primary name "Bravura" without
+written permission from Steinberg. VexFlow writes `font-family="Bravura,Academico"`
+straight into its SVG output and measures glyph widths against that family name
+through `canvas.measureText` (`src/components/Staff.svelte:21`, `visual/page.ts:25`),
+so a compliant subset means renaming the font and remapping that name through the
+renderer, the export CSS, and every visual snapshot. Not in this phase. If export
+size ever becomes a real complaint, the licensing-free lever is to make font
+embedding opt-out in export — omission is unconstrained, modification is not.
+
+**Unresolved questions**: none.

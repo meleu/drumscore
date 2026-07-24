@@ -12,9 +12,21 @@
  * `@font-face` block, making each export self-contained.
  */
 
-import { Font, VexFlow } from 'vexflow';
+import { NOTATION_FONTS } from './notation/fonts';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * Embedding the fonts is redistributing them, so every export that carries their bytes
+ * carries this too (SIL OFL 1.1, clause 2). PNG needs nothing: it rasterizes, keeps no
+ * font bytes, and clause 5 exempts documents created with the font.
+ */
+const FONT_NOTICE = `
+  This file embeds the Bravura and Academico fonts.
+  Copyright © Steinberg Media Technologies GmbH (http://www.steinberg.net/),
+  with Reserved Font Names "Bravura" and "Academico".
+  Licensed under the SIL Open Font License, Version 1.1: https://scripts.sil.org/OFL
+`;
 
 /** Save a crisp, scalable, self-contained copy of the current notation as SVG. */
 export async function exportSvg(svg: SVGSVGElement, filename = 'drumscore.svg'): Promise<void> {
@@ -78,6 +90,7 @@ async function buildStandaloneSvg(svg: SVGSVGElement): Promise<string> {
     const style = document.createElementNS(SVG_NS, 'style');
     style.textContent = fontCss;
     clone.insertBefore(style, clone.firstChild);
+    clone.insertBefore(document.createComment(FONT_NOTICE), clone.firstChild);
   }
 
   return new XMLSerializer().serializeToString(clone);
@@ -95,14 +108,14 @@ function svgSize(svg: SVGSVGElement): { width: number; height: number } {
 const fontCache = new Map<string, string | null>();
 
 /**
- * `@font-face` rules for the fonts VexFlow is configured to use, each with its woff2
- * inlined as a data URI. Fonts that cannot be fetched are skipped rather than failing
- * the export. Empty when none resolve.
+ * `@font-face` rules for the fonts the staff is drawn with, each with its woff2 inlined
+ * as a data URI. Fonts that cannot be fetched are skipped rather than failing the
+ * export. Empty when none resolve.
  */
 async function embeddedFontCss(): Promise<string> {
   const faces = await Promise.all(
-    VexFlow.getFonts().map(async (name) => {
-      const dataUri = await fontDataUri(name);
+    Object.entries(NOTATION_FONTS).map(async ([name, url]) => {
+      const dataUri = await fontDataUri(name, url);
       return dataUri
         ? `@font-face { font-family: '${name}'; src: url(${dataUri}) format('woff2'); }`
         : null;
@@ -111,21 +124,21 @@ async function embeddedFontCss(): Promise<string> {
   return faces.filter(Boolean).join('\n');
 }
 
-/** Fetch a font's woff2 from VexFlow's configured host and encode it as a data URI. */
-async function fontDataUri(name: string): Promise<string | null> {
+/**
+ * Fetch a font's woff2 and encode it as a data URI. The URL is our own bundled asset,
+ * so this is a same-origin request the browser has almost certainly cached already.
+ */
+async function fontDataUri(name: string, url: string): Promise<string | null> {
   if (fontCache.has(name)) return fontCache.get(name) ?? null;
 
   let dataUri: string | null = null;
   try {
-    const url = Font.getURLForFont(name);
-    if (url) {
-      const response = await fetch(url);
-      if (response.ok) {
-        dataUri = `data:font/woff2;base64,${base64(await response.arrayBuffer())}`;
-      }
+    const response = await fetch(url);
+    if (response.ok) {
+      dataUri = `data:font/woff2;base64,${base64(await response.arrayBuffer())}`;
     }
   } catch {
-    // Offline or blocked: fall through with no embedded font.
+    // Unreadable for whatever reason: fall through with no embedded font.
   }
 
   fontCache.set(name, dataUri);

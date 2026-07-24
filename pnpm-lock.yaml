@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@vexflow-fonts/academico':
+        specifier: ^1.0.1
+        version: 1.0.1
+      '@vexflow-fonts/bravura':
+        specifier: ^1.0.2
+        version: 1.0.2
       tone:
         specifier: ^15.1.22
         version: 15.1.22
@@ -398,6 +404,12 @@ packages:
   '@typescript-eslint/visitor-keys@8.65.0':
     resolution: {integrity: sha512-8C71BQkGjiMmXtop7pHVJu1l2NNShFdkCyD6a2ezzs5vU/L3LRtb69EtcteFwz0mYMPzIgOw0n6OV4VBUWZd7A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@vexflow-fonts/academico@1.0.1':
+    resolution: {integrity: sha512-Cy7oM8MQdQpBmylNfUCEEKh1RhjRGaokIKy0pu6DsdI+dSdqHreXUX66X7MDvJxgiQkSP2dOJG6TCETTclP1UQ==}
+
+  '@vexflow-fonts/bravura@1.0.2':
+    resolution: {integrity: sha512-n3KC5hpv1CEoZCbMJ43WeUq71cIIycOUlWe2RU5OOIIKrQ9V8n0KV8v/oX/MDHokTXvUyTo4vJ2dsoMyMBeg4w==}
 
   '@vitest/coverage-v8@4.1.10':
     resolution: {integrity: sha512-IM49HmthevbgAO4anp1hwtoT9wYe59w0LR00gr+eagHE+ZJ5lK4sLPeO0ubgoJcwLk6dehU3R24N+FbEEKDc8g==}
@@ -1509,6 +1521,10 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.65.0
       eslint-visitor-keys: 5.0.1
+
+  '@vexflow-fonts/academico@1.0.1': {}
+
+  '@vexflow-fonts/bravura@1.0.2': {}
 
   '@vitest/coverage-v8@4.1.10(vitest@4.1.10)':
     dependencies:

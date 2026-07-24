@@ -3,6 +3,8 @@
   "description": "Quickly sketch drum loops and see them in real musical notation.",
   "private": true,
   "version": "0.0.0",
+  "//license": "Covers this project's own source. The bundled fonts stay under the SIL OFL 1.1 — see LICENSE.",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@11.10.0",
   "engines": {
@@ -27,6 +29,8 @@
     "verify:visual:update": "node visual/snapshot.ts --update"
   },
   "dependencies": {
+    "@vexflow-fonts/academico": "^1.0.1",
+    "@vexflow-fonts/bravura": "^1.0.2",
     "tone": "^15.1.22",
     "vexflow": "^5.0.0"
   },

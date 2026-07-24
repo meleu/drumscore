@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { notationFontsReady } from '$lib/notation/fonts';
   import type { NotationModel } from '$lib/notation/model';
   import { renderNotation } from '$lib/notation/renderer';
-  import { VexFlow } from 'vexflow';
 
   interface Props {
     model: NotationModel;
@@ -19,12 +19,11 @@
   let fontsReady = $state(false);
 
   // VexFlow measures every glyph against its music font (Bravura, with Academico for
-  // text), which it loads lazily on first use. Until that font arrives, a draw uses
-  // fallback metrics and stems/beams land in the wrong place — visible on the very
-  // first render, then silently corrected by any later redraw. Preload the fonts and
-  // hold the first draw until they're ready. `getFonts()` returns the configured
-  // family list, so we load whatever VexFlow is actually set to use.
-  VexFlow.loadFonts(...VexFlow.getFonts()).then(() => (fontsReady = true));
+  // text). Until those fonts arrive, a draw uses fallback metrics and stems/beams land
+  // in the wrong place — visible on the very first render, then silently corrected by
+  // any later redraw. They are served from our own bundle (see `$lib/notation/fonts`),
+  // so this is a local load, but still hold the first draw until it resolves.
+  notationFontsReady.then(() => (fontsReady = true));
 
   // The attachment re-runs whenever the model changes, the container is resized, or the
   // fonts become ready, redrawing the staff from scratch each time.

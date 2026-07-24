@@ -1,4 +1,5 @@
 import { toNotation } from '$lib/notation/engine';
+import { notationFontsReady } from '$lib/notation/fonts';
 import { renderNotation } from '$lib/notation/renderer';
 import { FIXTURES, patternFor } from './fixtures';
 
@@ -22,12 +23,12 @@ declare global {
 }
 
 async function draw() {
-  // VexFlow measures every glyph against Bravura through canvas.measureText, and it only
-  // starts loading that font at import time. Drawing before it arrives silently measures
-  // whatever face the browser falls back to — a notehead comes out 30px wide instead of
-  // 12 — and spreads the staff out wrong. Waiting is what makes the baselines mean
-  // anything, so the check refuses to run rather than quietly recording a bad layout.
-  await document.fonts.ready;
+  // VexFlow measures every glyph against Bravura through canvas.measureText. Drawing
+  // before the font arrives silently measures whatever face the browser falls back to —
+  // a notehead comes out 30px wide instead of 12 — and spreads the staff out wrong.
+  // Waiting is what makes the baselines mean anything, so the check refuses to run
+  // rather than quietly recording a bad layout.
+  await notationFontsReady;
   if (!document.fonts.check(`${GLYPH_SIZE} Bravura`)) {
     throw new Error('Bravura did not load; every glyph would be measured against a fallback');
   }

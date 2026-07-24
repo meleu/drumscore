@@ -1,4 +1,6 @@
-import { Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow';
+// `vexflow/core` is the library without its six bundled fonts; the two this app draws
+// with are registered by `./fonts`, which every caller loads before the first render.
+import { Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow/core';
 import type {
   NotationEvent,
   NotationModel,
