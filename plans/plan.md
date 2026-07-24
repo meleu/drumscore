@@ -7,7 +7,7 @@
 Durable decisions that apply across all phases:
 
 - **Stack**: Vite + TypeScript + Svelte. Audio via Tone.js. Notation via VexFlow (SVG backend). Vitest for tests.
-- **Delivery**: Fully static, no backend, no accounts. Deployed to GitHub Pages via GitHub Actions on push to `main`, with Vite `base` set to `/drumscore/`.
+- **Delivery**: Fully static, no backend, no accounts.
 - **Grid dimensions (parameterized, no magic constants)**: `voices` (6), `stepsPerBeat` (4 = 16th), `beatsPerBar` (4), `bars` (2) → 6 rows × 32 columns for v1. All derived from the data model so later expansion needs no rewrite.
 - **Voices (fixed order)**: Kick, Snare, Closed Hi-hat, Open Hi-hat, Crash, Ride.
 - **Cells**: binary on/off, uniform velocity. Simultaneous hits across voices supported.

@@ -84,8 +84,6 @@ is a static site with no accounts and no backend.
 - Audio via Tone.js.
 - Notation via VexFlow, rendered through its **SVG backend** (crisp output and cheap
   image export).
-- Deployed to GitHub Pages via a GitHub Actions workflow on push to `main`, with Vite
-  `base` set to `/drumscore/`.
 - Fully static: no backend, no accounts.
 
 **Musical scope (v1)**
