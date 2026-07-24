@@ -23,8 +23,9 @@ export const FIXTURES: readonly Fixture[] = [
   { name: 'struck-past-the-beat', hits: { kick: [6, 10] } },
   { name: 'struck-odd-span', hits: { kick: [8, 13] } },
   { name: 'ringing-whole-bar', hits: { crash: [0] } },
-  { name: 'ringing-tied-across-a-beat', hits: { crash: [0], kick: [6] } },
+  { name: 'ringing-tied-across-a-beat', hits: { crash: [0], ride: [6] } },
   { name: 'ringing-odd-span', hits: { openHiHat: [8, 13] } },
+  { name: 'chord', hits: { kick: [0], snare: [0], crash: [0], ride: [8] } },
   {
     name: 'rock-beat',
     hits: {

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { createPattern, stepsPerBar, toggle, type Pattern, type VoiceId } from '$lib/pattern';
 import { toNotation } from './engine';
-import type { NotationEvent, NoteValue } from './model';
+import type {
+  NotationEvent,
+  NotationMeasure,
+  NotationPart,
+  Notehead,
+  NoteValue,
+  PartId,
+} from './model';
 
 /** Build a pattern by switching on the listed steps for each voice. */
 function patternWith(hits: Partial<Record<VoiceId, number[]>>): Pattern {
@@ -21,44 +28,63 @@ const STEPS: Record<NoteValue, number> = {
   sixteenth: 1,
 };
 
-const CODES: Record<string, NoteValue> = {
-  w: 'whole',
-  h: 'half',
-  q: 'quarter',
-  '8': 'eighth',
-  '16': 'sixteenth',
+const CODES: Record<NoteValue, string> = {
+  whole: 'w',
+  half: 'h',
+  quarter: 'q',
+  eighth: '8',
+  sixteenth: '16',
 };
-
-function valueOf(code: string): NoteValue {
-  const value = CODES[code];
-  if (!value) throw new Error(`unknown rhythm code: ${code}`);
-
-  return value;
-}
 
 /**
  * Spell a measure out as a rhythm: `'rq q~8 8'` is a quarter rest, then a quarter note
  * tied to an eighth, then another eighth — an `r` prefix marks a rest and `~` ties one
- * stroke's pieces together. Steps come from laying the events end to end, which is
- * exactly how a measure is read.
+ * stroke's pieces together. Reading the events back this way keeps the expectations below
+ * short enough to check against the bar you have in your head.
  */
-function measure(spec: string): NotationEvent[] {
-  let step = 0;
+function rhythm(events: NotationEvent[]): string {
+  return events
+    .map((event, index) => {
+      const previous = events[index - 1];
+      const tied = previous?.kind === 'note' && previous.tiedToNext;
+      const separator = index === 0 ? '' : tied ? '~' : ' ';
 
-  return spec.split(' ').flatMap((token) => {
-    const isRest = token.startsWith('r');
-    const codes = (isRest ? token.slice(1) : token).split('~');
+      return separator + (event.kind === 'rest' ? 'r' : '') + CODES[event.value];
+    })
+    .join('');
+}
 
-    return codes.map((code, index): NotationEvent => {
-      const value = valueOf(code);
-      const event: NotationEvent = isRest
-        ? { kind: 'rest', step, value }
-        : { kind: 'note', step, value, tiedToNext: index < codes.length - 1 };
-      step += STEPS[value];
+function partOf(measure: NotationMeasure, id: PartId): NotationPart {
+  const part = measure.parts.find((candidate) => candidate.id === id);
+  if (!part) throw new Error(`no ${id} part in the measure`);
 
-      return event;
-    });
-  });
+  return part;
+}
+
+function measureOf(pattern: Pattern, bar = 0): NotationMeasure {
+  const measure = toNotation(pattern).measures[bar];
+  if (!measure) throw new Error(`the notation has no bar ${bar}`);
+
+  return measure;
+}
+
+function rhythmOf(pattern: Pattern, id: PartId): string[] {
+  return toNotation(pattern).measures.map((measure) => rhythm(partOf(measure, id).events));
+}
+
+const KICK: Notehead = { style: 'normal', position: { step: 'f', octave: 4 } };
+const SNARE: Notehead = { style: 'normal', position: { step: 'c', octave: 5 } };
+const CLOSED_HI_HAT: Notehead = { style: 'cross', position: { step: 'g', octave: 5 } };
+const OPEN_HI_HAT: Notehead = { style: 'cross', position: { step: 'g', octave: 5 } };
+const CRASH: Notehead = { style: 'cross', position: { step: 'a', octave: 5 } };
+const RIDE: Notehead = { style: 'cross', position: { step: 'f', octave: 5 } };
+
+/** The noteheads of the first note in a part's first measure. */
+function firstChord(pattern: Pattern, id: PartId): Notehead[] {
+  const note = partOf(measureOf(pattern), id).events.find((event) => event.kind === 'note');
+  if (!note) throw new Error(`the ${id} part has no notes`);
+
+  return note.noteheads;
 }
 
 describe('toNotation', () => {
@@ -70,114 +96,240 @@ describe('toNotation', () => {
     expect(toNotation(createPattern()).measures).toHaveLength(2);
   });
 
-  const cases: { name: string; hits: Partial<Record<VoiceId, number[]>>; expected: string[] }[] = [
+  interface Case {
+    name: string;
+    hits: Partial<Record<VoiceId, number[]>>;
+    hands: string[];
+    feet: string[];
+  }
+
+  const cases: Case[] = [
     {
-      name: 'an empty bar is a single full-bar rest',
+      name: 'an empty bar is a single full-bar rest in both parts',
       hits: {},
-      expected: ['rw', 'rw'],
+      hands: ['rw', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'four on the floor collapses to quarter notes',
       hits: { kick: [0, 4, 8, 12] },
-      expected: ['q q q q', 'rw'],
+      hands: ['rw', 'rw'],
+      feet: ['q q q q', 'rw'],
     },
     {
       name: 'straight 8ths collapse to eighth notes, not 16ths and rests',
       hits: { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14] },
-      expected: ['8 8 8 8 8 8 8 8', 'rw'],
+      hands: ['8 8 8 8 8 8 8 8', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'a backbeat is a quarter on 2 and on 4, with rests between',
       hits: { snare: [4, 12] },
-      expected: ['rq q rq q', 'rw'],
+      hands: ['rq q rq q', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'syncopated hits keep their off-beat placement',
       hits: { kick: [0, 3, 6] },
-      expected: ['8 r16 16 r8 8 rh', 'rw'],
+      hands: ['rw', 'rw'],
+      feet: ['8 r16 16 r8 8 rh', 'rw'],
     },
     {
       name: 'a struck hit never sounds past its own beat',
       hits: { kick: [6, 10] },
-      expected: ['rq r8 8 r8 8 rq', 'rw'],
+      hands: ['rw', 'rw'],
+      feet: ['rq r8 8 r8 8 rq', 'rw'],
     },
     {
       name: 'a struck span of three sixteenths is a note and a rest',
       hits: { kick: [12, 15] },
-      expected: ['rh rq 8 r16 16', 'rw'],
+      hands: ['rw', 'rw'],
+      feet: ['rh rq 8 r16 16', 'rw'],
     },
     {
       name: 'a struck span of five sixteenths is a note and a rest',
       hits: { kick: [8, 13] },
-      expected: ['rh q r16 16 r8', 'rw'],
+      hands: ['rw', 'rw'],
+      feet: ['rh q r16 16 r8', 'rw'],
     },
     {
       name: 'a ringing crash is held for the whole bar',
       hits: { crash: [0] },
-      expected: ['w', 'rw'],
+      hands: ['w', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'a ringing hit crossing a beat boundary is split and tied at the beat',
-      hits: { crash: [0], kick: [6] },
-      expected: ['q~8 8 rh', 'rw'],
+      hits: { crash: [0], ride: [6] },
+      hands: ['q~8 8 rh', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'a ringing span of three sixteenths becomes an eighth tied to a sixteenth',
       hits: { openHiHat: [12, 15] },
-      expected: ['rh rq 8~16 16', 'rw'],
+      hands: ['rh rq 8~16 16', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'a ringing span of five sixteenths becomes a quarter tied to a sixteenth',
       hits: { openHiHat: [8, 13] },
-      expected: ['rh q~16 16~8', 'rw'],
+      hands: ['rh q~16 16~8', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
       name: 'a ringing hit stops at the bar line rather than carrying over',
       hits: { crash: [13] },
-      expected: ['rh rq r16 16~8', 'rw'],
+      hands: ['rh rq r16 16~8', 'rw'],
+      feet: ['rw', 'rw'],
     },
     {
-      name: 'simultaneous hits on different voices collapse into a single note',
+      name: 'simultaneous hands hits collapse into one note, and the kick keeps its own',
       hits: { kick: [0], snare: [0], closedHiHat: [0] },
-      expected: ['q rq rh', 'rw'],
+      hands: ['q rq rh', 'rw'],
+      feet: ['q rq rh', 'rw'],
     },
     {
-      name: 'a step where a ringing voice sounds is held, struck voices notwithstanding',
+      name: 'a ringing hand does not hold the feet with it',
       hits: { kick: [0], crash: [0] },
-      expected: ['w', 'rw'],
+      hands: ['w', 'rw'],
+      feet: ['q rq rh', 'rw'],
+    },
+    {
+      name: 'a kick between two snares no longer chops up the snare rhythm',
+      hits: { snare: [4, 12], kick: [0, 6, 8] },
+      hands: ['rq q rq q', 'rw'],
+      feet: ['q r8 8 q rq', 'rw'],
+    },
+    {
+      name: 'a rock beat writes each part from its own hits',
+      hits: {
+        closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14],
+        snare: [4, 12],
+        kick: [0, 8],
+      },
+      hands: ['8 8 8 8 8 8 8 8', 'rw'],
+      feet: ['q rq q rq', 'rw'],
     },
     {
       name: 'steps in the second bar are numbered relative to that bar',
       hits: { snare: [20, 28] },
-      expected: ['rw', 'rq q rq q'],
+      hands: ['rw', 'rq q rq q'],
+      feet: ['rw', 'rw'],
     },
   ];
 
-  it.each(cases)('$name', ({ hits, expected }) => {
-    const { measures } = toNotation(patternWith(hits));
+  it.each(cases)('$name', ({ hits, hands, feet }) => {
+    const pattern = patternWith(hits);
 
-    expect(measures.map(({ events }) => events)).toEqual(expected.map(measure));
+    expect(rhythmOf(pattern, 'hands')).toEqual(hands);
+    expect(rhythmOf(pattern, 'feet')).toEqual(feet);
   });
 
-  it.each(cases)('fills every measure exactly: $name', ({ hits }) => {
+  it.each(cases)('fills every measure of every part exactly: $name', ({ hits }) => {
     const pattern = patternWith(hits);
     const barLength = stepsPerBar(pattern.dimensions);
 
-    for (const { events } of toNotation(pattern).measures) {
-      const lengths = events.map(({ value }) => STEPS[value]);
-      const total = lengths.reduce((sum, steps) => sum + steps, 0);
+    for (const { parts } of toNotation(pattern).measures) {
+      for (const { events } of parts) {
+        const lengths = events.map(({ value }) => STEPS[value]);
+        const total = lengths.reduce((sum, steps) => sum + steps, 0);
 
-      expect(total).toBe(barLength);
-      expect(events.map(({ step }) => step)).toEqual(runningTotals(lengths));
+        expect(total).toBe(barLength);
+        expect(events.map(({ step }) => step)).toEqual(runningTotals(lengths));
+      }
     }
   });
 
   it.each(cases)('never ties into a rest or across the bar line: $name', ({ hits }) => {
-    for (const { events } of toNotation(patternWith(hits)).measures) {
-      for (const [index, event] of events.entries()) {
-        if (event.kind === 'note' && event.tiedToNext) expect(events[index + 1]?.kind).toBe('note');
+    for (const { parts } of toNotation(patternWith(hits)).measures) {
+      for (const { events } of parts) {
+        for (const [index, event] of events.entries()) {
+          if (event.kind === 'note' && event.tiedToNext)
+            expect(events[index + 1]?.kind).toBe('note');
+        }
       }
     }
+  });
+
+  it.each(cases)('gives every note at least one notehead: $name', ({ hits }) => {
+    for (const { parts } of toNotation(patternWith(hits)).measures) {
+      for (const { events } of parts) {
+        for (const event of events) {
+          if (event.kind === 'note') expect(event.noteheads.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+});
+
+describe('parts', () => {
+  it('writes the hands stems-up and the feet stems-down', () => {
+    const measure = measureOf(createPattern());
+
+    expect(measure.parts.map(({ id, stemDirection }) => [id, stemDirection])).toEqual([
+      ['hands', 'up'],
+      ['feet', 'down'],
+    ]);
+  });
+
+  it('rests in each part sit clear of the other part', () => {
+    const measure = measureOf(patternWith({}));
+
+    expect(measure.parts.map(({ events }) => events)).toEqual([
+      [{ kind: 'rest', step: 0, value: 'whole', position: { step: 'd', octave: 5 } }],
+      [{ kind: 'rest', step: 0, value: 'whole', position: { step: 'g', octave: 4 } }],
+    ]);
+  });
+
+  it('sits shorter rests on the line below the whole rest', () => {
+    const hands = partOf(measureOf(patternWith({ snare: [12] })), 'hands');
+
+    expect(hands.events).toEqual([
+      { kind: 'rest', step: 0, value: 'half', position: { step: 'b', octave: 4 } },
+      { kind: 'rest', step: 8, value: 'quarter', position: { step: 'b', octave: 4 } },
+      { kind: 'note', step: 12, value: 'quarter', tiedToNext: false, noteheads: [SNARE] },
+    ]);
+  });
+});
+
+describe('noteheads', () => {
+  const drums: [VoiceId, PartId, Notehead][] = [
+    ['kick', 'feet', KICK],
+    ['snare', 'hands', SNARE],
+    ['closedHiHat', 'hands', CLOSED_HI_HAT],
+    ['openHiHat', 'hands', OPEN_HI_HAT],
+    ['crash', 'hands', CRASH],
+    ['ride', 'hands', RIDE],
+  ];
+
+  it.each(drums)('writes %s with its conventional notehead and position', (voice, part, head) => {
+    expect(firstChord(patternWith({ [voice]: [0] }), part)).toEqual([head]);
+  });
+
+  it('merges simultaneous hands hits into one chord, ordered low to high', () => {
+    const pattern = patternWith({ snare: [0], crash: [0], ride: [0] });
+
+    expect(firstChord(pattern, 'hands')).toEqual([SNARE, RIDE, CRASH]);
+  });
+
+  it('keeps the kick out of the hands chord', () => {
+    const pattern = patternWith({ kick: [0], snare: [0], closedHiHat: [0] });
+
+    expect(firstChord(pattern, 'hands')).toEqual([SNARE, CLOSED_HI_HAT]);
+    expect(firstChord(pattern, 'feet')).toEqual([KICK]);
+  });
+
+  it('writes both hi-hats struck together as a single notehead', () => {
+    const pattern = patternWith({ closedHiHat: [0], openHiHat: [0] });
+
+    expect(firstChord(pattern, 'hands')).toEqual([CLOSED_HI_HAT]);
+  });
+
+  it("repeats a stroke's noteheads on every piece it is tied across", () => {
+    const hands = partOf(measureOf(patternWith({ crash: [0], ride: [6] })), 'hands');
+    const tied = hands.events.filter((event) => event.kind === 'note').slice(0, 2);
+
+    expect(tied.map(({ noteheads }) => noteheads)).toEqual([[CRASH], [CRASH]]);
   });
 });
 

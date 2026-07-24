@@ -27,56 +27,62 @@
 <text stroke="none" font-size="30pt" x="45" y="102"></text>
 </g>
 <g class="vf-stavenote">
+<path stroke-width="2" fill="none" stroke="#444" d="M73 62L91 62">
+</path>
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M87.25 87L87.25 27">
+</path>
+</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="76" y="72"></text>
+<text stroke="none" font-size="30pt" x="76" y="87"></text>
 </g>
-<rect x="76" y="72" width="11" height="6" opacity="0" pointer-events="auto">
-</rect>
-</g>
-<g class="vf-stavenote">
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="76" y="107"></text>
+<text stroke="none" font-size="30pt" x="76" y="62"></text>
 </g>
-<rect x="76" y="101" width="11" height="6" opacity="0" pointer-events="auto">
+<rect x="76" y="27" width="13" height="66" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
 <g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M217.482 107L217.482 142">
+<path stroke-width="1.5" fill="none" d="M288.929 72L288.929 37">
 </path>
 </g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="216.732" y="107"></text>
+<text stroke="none" font-size="30pt" x="277.679" y="72"></text>
 </g>
-<rect x="216.732" y="102" width="12" height="40" opacity="0" pointer-events="auto">
+<rect x="277.679" y="37" width="12" height="40" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="295.871" y="107"></text>
+<text stroke="none" font-size="30pt" x="378.519" y="92"></text>
 </g>
-<rect x="295.871" y="99" width="13" height="28" opacity="0" pointer-events="auto">
+<rect x="378.519" y="77" width="11" height="30" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
 <g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M348.012 107L348.012 139">
+<path stroke-width="1.5" fill="none" d="M76.75 107L76.75 142">
 </path>
 </g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="347.262" y="107"></text>
+<text stroke="none" font-size="30pt" x="76" y="107"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="347.262" y="141"></text>
-</g>
-<rect x="347.262" y="102" width="12" height="40" opacity="0" pointer-events="auto">
+<rect x="76" y="102" width="12" height="40" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="398.654" y="107"></text>
+<text stroke="none" font-size="30pt" x="176.84" y="107"></text>
 </g>
-<rect x="398.654" y="99" width="10" height="18" opacity="0" pointer-events="auto">
+<rect x="176.84" y="92" width="11" height="30" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="277.679" y="107"></text>
+</g>
+<rect x="277.679" y="101" width="11" height="6" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stave">

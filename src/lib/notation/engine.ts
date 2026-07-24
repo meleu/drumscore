@@ -1,30 +1,73 @@
-import {
-  hasHitAt,
-  isHit,
-  stepsPerBar,
-  type GridDimensions,
-  type Pattern,
-  type VoiceId,
-} from '$lib/pattern';
-import type { NotationEvent, NotationMeasure, NotationModel, NoteValue } from './model';
+import { isHit, stepsPerBar, type GridDimensions, type Pattern, type VoiceId } from '$lib/pattern';
+import type {
+  NotationEvent,
+  NotationMeasure,
+  NotationModel,
+  NotationPart,
+  Notehead,
+  NoteValue,
+  PartId,
+  StaffPosition,
+  StemDirection,
+} from './model';
 
 /**
  * Translate a pattern into the notation model.
  *
- * Drums are struck, not held: a stroke is written as a note no longer than its own beat
- * and the time until the next hit is filled with rests. That is what turns a grid of
- * 16th-note cells into readable rhythm while keeping the pulse visible.
+ * The staff carries two rhythms rather than one: the hands, stems up, and the feet,
+ * stems down. Each is written from its own hits, so a snare on 2 and 4 is not chopped up
+ * by the kick playing underneath it, and each fills its own measure with its own rests.
+ * Drums struck together in the same part become one chord.
+ *
+ * Within a part, drums are struck, not held: a stroke is written as a note no longer than
+ * its own beat and the time until the next hit is filled with rests. That is what turns a
+ * grid of 16th-note cells into readable rhythm while keeping the pulse visible.
  *
  * Cymbals that ring on — the crash and the open hi-hat — are the exception. They are
  * written as sounding until the next hit, and a span no single note value can spell,
  * because it crosses a beat or is simply an odd number of steps, becomes legal values
  * joined by ties.
- *
- * Still one merged voice: per-voice noteheads, chords, and beaming arrive later.
  */
 
 /** The voices left ringing rather than damped, and so written as held notes. */
 const RINGING: readonly VoiceId[] = ['openHiHat', 'crash'];
+
+/** Where each drum sits on the staff, and what its notehead looks like. */
+const NOTEHEADS: Readonly<Record<VoiceId, Notehead>> = {
+  kick: { style: 'normal', position: { step: 'f', octave: 4 } },
+  snare: { style: 'normal', position: { step: 'c', octave: 5 } },
+  closedHiHat: { style: 'cross', position: { step: 'g', octave: 5 } },
+  openHiHat: { style: 'cross', position: { step: 'g', octave: 5 } },
+  crash: { style: 'cross', position: { step: 'a', octave: 5 } },
+  ride: { style: 'cross', position: { step: 'f', octave: 5 } },
+};
+
+interface Part {
+  id: PartId;
+  stemDirection: StemDirection;
+  voices: readonly VoiceId[];
+  /** Rests keep out of the noteheads' way by sitting in their own part of the staff. */
+  restPosition: StaffPosition;
+  /** The whole rest is the odd one out: it hangs from the line above the others. */
+  wholeRestPosition: StaffPosition;
+}
+
+const PARTS: readonly Part[] = [
+  {
+    id: 'hands',
+    stemDirection: 'up',
+    voices: ['snare', 'closedHiHat', 'openHiHat', 'crash', 'ride'],
+    restPosition: { step: 'b', octave: 4 },
+    wholeRestPosition: { step: 'd', octave: 5 },
+  },
+  {
+    id: 'feet',
+    stemDirection: 'down',
+    voices: ['kick'],
+    restPosition: { step: 'f', octave: 4 },
+    wholeRestPosition: { step: 'g', octave: 4 },
+  },
+];
 
 /** How many of each note value make a whole note. */
 const VALUES_PER_WHOLE: readonly [NoteValue, number][] = [
@@ -100,21 +143,23 @@ function lengthOf(pieces: Piece[]): number {
   return pieces.reduce((total, piece) => total + piece.steps, 0);
 }
 
-function restsFor(table: Duration[], step: number, length: number): NotationEvent[] {
+function restsFor(table: Duration[], part: Part, step: number, length: number): NotationEvent[] {
   return split(table, step, length).map(({ step: at, value }) => ({
     kind: 'rest',
     step: at,
     value,
+    position: value === 'whole' ? part.wholeRestPosition : part.restPosition,
   }));
 }
 
 /** The pieces of one stroke, tied so that together they still read as a single hit. */
-function notesFrom(pieces: Piece[]): NotationEvent[] {
+function notesFrom(pieces: Piece[], noteheads: Notehead[]): NotationEvent[] {
   return pieces.map(({ step, value }, index) => ({
     kind: 'note',
     step,
     value,
     tiedToNext: index < pieces.length - 1,
+    noteheads,
   }));
 }
 
@@ -122,6 +167,7 @@ interface Hit {
   step: number;
   /** A ringing voice was struck here, so the hit is held instead of cut short. */
   rings: boolean;
+  noteheads: Notehead[];
 }
 
 /**
@@ -137,24 +183,57 @@ function strokeFor(table: Duration[], hit: Hit, gap: number, beatSteps: number):
   return [{ step: hit.step, ...longestFit(table, hit.step, Math.min(gap, beatSteps)) }];
 }
 
-/** The hits of one bar, at steps relative to that bar. */
-function hitsIn(pattern: Pattern, bar: number, barLength: number): Hit[] {
+const DIATONIC: readonly string[] = ['c', 'd', 'e', 'f', 'g', 'a', 'b'];
+
+/** How high a position sits, so a chord's noteheads can be ordered bottom to top. */
+function heightOf({ step, octave }: StaffPosition): number {
+  return octave * DIATONIC.length + DIATONIC.indexOf(step);
+}
+
+/**
+ * The chord struck at one step, low to high.
+ *
+ * Drums sharing a position and a notehead — the two hi-hats, which v1 tells apart only by
+ * whether they ring — collapse into one head, because writing them twice would stack two
+ * identical glyphs on the same line.
+ */
+function noteheadsAt(pattern: Pattern, part: Part, at: number): Notehead[] {
+  const struck = part.voices.filter((voice) => isHit(pattern, voice, at));
+  const heads = new Map(
+    struck.map((voice) => {
+      const head = NOTEHEADS[voice];
+
+      return [`${head.style}:${head.position.step}${head.position.octave}`, head];
+    }),
+  );
+
+  return [...heads.values()].sort((a, b) => heightOf(a.position) - heightOf(b.position));
+}
+
+/** The hits of one part within one bar, at steps relative to that bar. */
+function hitsIn(pattern: Pattern, part: Part, bar: number, barLength: number): Hit[] {
   const hits: Hit[] = [];
 
   for (let step = 0; step < barLength; step += 1) {
     const at = bar * barLength + step;
-    if (hasHitAt(pattern, at)) {
-      hits.push({ step, rings: RINGING.some((voice) => isHit(pattern, voice, at)) });
+    const noteheads = noteheadsAt(pattern, part, at);
+
+    if (noteheads.length > 0) {
+      hits.push({
+        step,
+        rings: RINGING.some((voice) => part.voices.includes(voice) && isHit(pattern, voice, at)),
+        noteheads,
+      });
     }
   }
 
   return hits;
 }
 
-function measureFor(pattern: Pattern, bar: number, table: Duration[]): NotationMeasure {
+function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): NotationPart {
   const { stepsPerBeat } = pattern.dimensions;
   const barLength = stepsPerBar(pattern.dimensions);
-  const hits = hitsIn(pattern, bar, barLength);
+  const hits = hitsIn(pattern, part, bar, barLength);
 
   const events: NotationEvent[] = [];
   let filled = 0;
@@ -164,13 +243,16 @@ function measureFor(pattern: Pattern, bar: number, table: Duration[]): NotationM
     const until = hits[index + 1]?.step ?? barLength;
     const stroke = strokeFor(table, hit, until - hit.step, stepsPerBeat);
 
-    events.push(...restsFor(table, filled, hit.step - filled), ...notesFrom(stroke));
+    events.push(
+      ...restsFor(table, part, filled, hit.step - filled),
+      ...notesFrom(stroke, hit.noteheads),
+    );
     filled = hit.step + lengthOf(stroke);
   }
 
-  events.push(...restsFor(table, filled, barLength - filled));
+  events.push(...restsFor(table, part, filled, barLength - filled));
 
-  return { events };
+  return { id: part.id, stemDirection: part.stemDirection, events };
 }
 
 export function toNotation(pattern: Pattern): NotationModel {
@@ -179,6 +261,8 @@ export function toNotation(pattern: Pattern): NotationModel {
 
   return {
     timeSignature: { beats: dimensions.beatsPerBar, beatValue: dimensions.beatValue },
-    measures: Array.from({ length: dimensions.bars }, (_, bar) => measureFor(pattern, bar, table)),
+    measures: Array.from({ length: dimensions.bars }, (_, bar): NotationMeasure => ({
+      parts: PARTS.map((part) => partFor(pattern, part, bar, table)),
+    })),
   };
 }

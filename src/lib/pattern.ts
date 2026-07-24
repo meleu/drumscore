@@ -83,11 +83,6 @@ export function isHit(pattern: Pattern, voice: VoiceId, step: number): boolean {
   return pattern.rows[voice][step] ?? false;
 }
 
-/** True when any voice at all is struck on `step`. */
-export function hasHitAt(pattern: Pattern, step: number): boolean {
-  return VOICES.some((voice) => isHit(pattern, voice.id, step));
-}
-
 /** Flip one cell. Out-of-range steps leave the pattern untouched. */
 export function toggle(pattern: Pattern, voice: VoiceId, step: number): Pattern {
   const row = pattern.rows[voice];

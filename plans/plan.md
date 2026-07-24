@@ -95,13 +95,13 @@ Split the engine output into the two conventional rhythmic voices: **hands** (cr
 
 ### Acceptance criteria
 
-- [ ] Hands voice is stems-up; kick is a separate stems-down voice.
-- [ ] Durations are measured per voice — the gap to the next hit in the _same_ voice — instead of from the merged step list, and each voice's measure is filled with its own rests.
-- [ ] Simultaneous hands hits at one step merge into a single chord with per-notehead styles/positions.
-- [ ] Cymbals and hi-hats use `x` noteheads; snare and kick use normal noteheads.
-- [ ] Each notehead in `NotationModel` carries style + staff position.
-- [ ] Renderer draws percussion clef, 4/4, no key signature, both voices.
-- [ ] Vitest cases assert chords with correct per-notehead styles and staff positions for simultaneous multi-voice hits.
+- [x] Hands voice is stems-up; kick is a separate stems-down voice.
+- [x] Durations are measured per voice — the gap to the next hit in the _same_ voice — instead of from the merged step list, and each voice's measure is filled with its own rests.
+- [x] Simultaneous hands hits at one step merge into a single chord with per-notehead styles/positions.
+- [x] Cymbals and hi-hats use `x` noteheads; snare and kick use normal noteheads.
+- [x] Each notehead in `NotationModel` carries style + staff position.
+- [x] Renderer draws percussion clef, 4/4, no key signature, both voices.
+- [x] Vitest cases assert chords with correct per-notehead styles and staff positions for simultaneous multi-voice hits.
 
 ---
 

@@ -8,6 +8,26 @@
 
 export type NoteValue = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth';
 
+export type DiatonicStep = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g';
+
+/**
+ * A height on the staff, named the way notation has always named heights — a letter and
+ * an octave. On a percussion staff it says nothing about pitch: it is only which line or
+ * space the glyph sits on, read against the drum key.
+ */
+export interface StaffPosition {
+  step: DiatonicStep;
+  octave: number;
+}
+
+/** Cymbals and hi-hats are written with a cross; drums with an ordinary notehead. */
+export type NoteheadStyle = 'normal' | 'cross';
+
+export interface Notehead {
+  style: NoteheadStyle;
+  position: StaffPosition;
+}
+
 export interface NotationNote {
   kind: 'note';
   /** Where the note starts, as a step index within its own measure. */
@@ -20,20 +40,40 @@ export interface NotationNote {
    * last.
    */
   tiedToNext: boolean;
+  /**
+   * The drums struck together here, low to high. More than one is a chord; a tied
+   * stroke repeats the same noteheads on each of its pieces.
+   */
+  noteheads: Notehead[];
 }
 
 export interface NotationRest {
   kind: 'rest';
   step: number;
   value: NoteValue;
+  position: StaffPosition;
 }
 
 /** Notes and rests share a measure's timeline, so they live in one ordered list. */
 export type NotationEvent = NotationNote | NotationRest;
 
-export interface NotationMeasure {
+/**
+ * Drum music is written as two rhythms sharing one staff: what the hands play, stems up,
+ * and what the feet play, stems down. Each carries its own rhythm and its own rests.
+ */
+export type PartId = 'hands' | 'feet';
+
+export type StemDirection = 'up' | 'down';
+
+export interface NotationPart {
+  id: PartId;
+  stemDirection: StemDirection;
   /** In step order, together filling the measure exactly. */
   events: NotationEvent[];
+}
+
+export interface NotationMeasure {
+  parts: NotationPart[];
 }
 
 export interface TimeSignature {

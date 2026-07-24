@@ -1,5 +1,13 @@
-import { Formatter, Renderer, Stave, StaveNote, StaveTie, Voice } from 'vexflow';
-import type { NotationEvent, NotationModel, NoteValue } from './model';
+import { Formatter, Renderer, Stave, StaveNote, StaveTie, Stem, Voice } from 'vexflow';
+import type {
+  NotationEvent,
+  NotationModel,
+  NotationPart,
+  Notehead,
+  NoteValue,
+  StaffPosition,
+  StemDirection,
+} from './model';
 
 /**
  * The thin adapter that draws a NotationModel with VexFlow's SVG backend. It holds no
@@ -17,35 +25,68 @@ const DURATION_CODES: Record<NoteValue, string> = {
   sixteenth: '16',
 };
 
-/**
- * Every notehead sits on the same line for now. Phase 4 gives each one its own staff
- * position and `x`/normal style per percussion convention.
- */
-const PLACEHOLDER_KEY = 'c/5';
+const STEM_DIRECTIONS: Record<StemDirection, number> = {
+  up: Stem.UP,
+  down: Stem.DOWN,
+};
 
 /**
- * Rests sit in the middle of the staff, except the whole rest, which by convention
- * hangs from the line above.
+ * VexFlow reads a notehead as `letter/octave`, optionally followed by a glyph code. `X`
+ * is the cross, and it picks the right weight for the note value on its own.
  */
-const REST_KEYS: Partial<Record<NoteValue, string>> = { whole: 'd/5' };
-const DEFAULT_REST_KEY = 'b/4';
+function keyFor(position: StaffPosition, glyph = ''): string {
+  return `${position.step}/${position.octave}${glyph}`;
+}
 
-const HEIGHT = 140;
-const STAVE_TOP = 24;
+function keyOf({ style, position }: Notehead): string {
+  return keyFor(position, style === 'cross' ? '/x' : '');
+}
+
+/** VexFlow spells a rest as the note value's code with an `r` suffix. */
+function toStaveNote(event: NotationEvent, stemDirection: StemDirection): StaveNote {
+  const isRest = event.kind === 'rest';
+
+  return new StaveNote({
+    keys: isRest ? [keyFor(event.position)] : event.noteheads.map(keyOf),
+    duration: DURATION_CODES[event.value] + (isRest ? 'r' : ''),
+    stemDirection: STEM_DIRECTIONS[stemDirection],
+    clef: CLEF,
+  });
+}
+
+const HEIGHT = 160;
+const STAVE_TOP = 32;
 const STAVE_LEFT = 10;
 /** The first measure also carries the clef and time signature, so it needs more room. */
 const FIRST_MEASURE_EXTRA_WIDTH = 60;
 const MIN_MEASURE_WIDTH = 180;
 
-/** VexFlow spells a rest as the note value's code with an `r` suffix. */
-function toStaveNote(event: NotationEvent): StaveNote {
-  const isRest = event.kind === 'rest';
+interface DrawnPart {
+  voice: Voice;
+  notes: StaveNote[];
+  events: NotationEvent[];
+}
 
-  return new StaveNote({
-    keys: [isRest ? (REST_KEYS[event.value] ?? DEFAULT_REST_KEY) : PLACEHOLDER_KEY],
-    duration: DURATION_CODES[event.value] + (isRest ? 'r' : ''),
-    clef: CLEF,
-  });
+function toVoice(part: NotationPart, beats: number, beatValue: number): DrawnPart {
+  const notes = part.events.map((event) => toStaveNote(event, part.stemDirection));
+  const voice = new Voice({ numBeats: beats, beatValue });
+  voice.addTickables(notes);
+
+  return { voice, notes, events: part.events };
+}
+
+/**
+ * Ties are drawn after formatting, because they span from one notehead to the next and so
+ * need the positions the formatter has just settled.
+ */
+function drawTies({ notes, events }: DrawnPart, context: ReturnType<Renderer['getContext']>) {
+  for (const [index, event] of events.entries()) {
+    if (event.kind !== 'note' || !event.tiedToNext) continue;
+
+    new StaveTie({ firstNote: notes[index], lastNote: notes[index + 1] })
+      .setContext(context)
+      .draw();
+  }
 }
 
 export function renderNotation(container: HTMLDivElement, model: NotationModel, width: number) {
@@ -76,24 +117,21 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
     }
     stave.setContext(context).draw();
 
-    if (measure.events.length > 0) {
-      const notes = measure.events.map(toStaveNote);
-      const voice = new Voice({ numBeats: beats, beatValue });
-      voice.addTickables(notes);
+    const parts = measure.parts
+      .filter((part) => part.events.length > 0)
+      .map((part) => toVoice(part, beats, beatValue));
+
+    if (parts.length > 0) {
+      const voices = parts.map(({ voice }) => voice);
 
       // formatToStave measures the room left after the clef and time signature, so the
-      // first measure's notes stay clear of them.
-      new Formatter().joinVoices([voice]).formatToStave([voice], stave);
-      voice.draw(context, stave);
+      // first measure's notes stay clear of them. Joining the parts first lines the hands
+      // up with the feet, so simultaneous strokes share a column.
+      new Formatter().joinVoices(voices).formatToStave(voices, stave);
 
-      // Ties are drawn last: they span from one notehead to the next, so they need the
-      // positions the formatter has just settled.
-      for (const [index, event] of measure.events.entries()) {
-        if (event.kind !== 'note' || !event.tiedToNext) continue;
-
-        new StaveTie({ firstNote: notes[index], lastNote: notes[index + 1] })
-          .setContext(context)
-          .draw();
+      for (const part of parts) {
+        part.voice.draw(context, stave);
+        drawTies(part, context);
       }
     }
 
