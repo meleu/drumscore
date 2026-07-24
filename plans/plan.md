@@ -136,15 +136,21 @@ resolver (URL → autosave → seed). Transport gains a Copy link button with tr
 
 ---
 
-## Phase 10: Export SVG + PNG
+## Phase 10: Export SVG + PNG — **Done**
 
 **User stories**: 21, 22
 
-Export module: serialize the rendered SVG for download; rasterize to PNG. Wire Export
-SVG / Export PNG controls into the transport.
+Export module (thin, browser-only): clones the live staff `<svg>`, embeds the
+Bravura/Academico music fonts as base64 `@font-face` data URIs (VexFlow draws glyphs as
+`<text>`, so an un-embedded file renders every notehead/clef/rest blank), and paints a
+white background to match the on-screen paper. SVG downloads that self-contained markup;
+PNG rasterizes it through an `<img>` onto a 2×-scaled canvas. Staff exposes its `<svg>`
+via a bindable prop; App wires Export SVG / Export PNG controls (disabled until first
+draw) into the transport. Font bytes come from `Font.getURLForFont`, so Phase 11's local
+vendoring is a drop-in.
 
-- [ ] Export SVG downloads a crisp scalable copy; Export PNG downloads a raster image.
-- [ ] Both reflect the exact notation currently on screen.
+- [x] Export SVG downloads a crisp scalable copy; Export PNG downloads a raster image.
+- [x] Both reflect the exact notation currently on screen.
 
 ---
 

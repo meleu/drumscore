@@ -9,9 +9,24 @@
     onbpm: (bpm: number) => void;
     onclear: () => void;
     oncopylink: () => Promise<boolean>;
+    onexportsvg: () => void;
+    onexportpng: () => void;
+    // False before the staff's first draw, when there is nothing to export yet.
+    canexport: boolean;
   }
 
-  let { playing, bpm, onplay, onstop, onbpm, onclear, oncopylink }: Props = $props();
+  let {
+    playing,
+    bpm,
+    onplay,
+    onstop,
+    onbpm,
+    onclear,
+    oncopylink,
+    onexportsvg,
+    onexportpng,
+    canexport,
+  }: Props = $props();
 
   // Transient confirmation shown on the Copy link button after a successful copy.
   let copied = $state(false);
@@ -54,6 +69,14 @@
 
   <button type="button" class="copy" onclick={handleCopyLink}>
     {copied ? 'Copied!' : 'Copy link'}
+  </button>
+
+  <button type="button" class="export" onclick={() => onexportsvg()} disabled={!canexport}>
+    Export SVG
+  </button>
+
+  <button type="button" class="export" onclick={() => onexportpng()} disabled={!canexport}>
+    Export PNG
   </button>
 </div>
 
@@ -103,7 +126,8 @@
   }
 
   .clear,
-  .copy {
+  .copy,
+  .export {
     padding: 0.5rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: 6px;
@@ -112,8 +136,14 @@
     cursor: pointer;
   }
 
+  .export:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
   .clear:focus-visible,
-  .copy:focus-visible {
+  .copy:focus-visible,
+  .export:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }

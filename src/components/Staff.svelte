@@ -5,9 +5,15 @@
 
   interface Props {
     model: NotationModel;
+    // The live `<svg>` VexFlow drew, exposed so the app can export it. Null until the
+    // first successful draw.
+    svg?: SVGSVGElement | null;
   }
 
-  let { model }: Props = $props();
+  // `svg` is written outward for the parent to bind and never read here, so
+  // no-useless-assignment can't see that its default and updates matter.
+  // eslint-disable-next-line no-useless-assignment
+  let { model, svg = $bindable(null) }: Props = $props();
 
   let width = $state(0);
   let fontsReady = $state(false);
@@ -23,7 +29,12 @@
   // The attachment re-runs whenever the model changes, the container is resized, or the
   // fonts become ready, redrawing the staff from scratch each time.
   const draw = (node: HTMLDivElement) => {
-    if (width > 0 && fontsReady) renderNotation(node, model, width);
+    if (width > 0 && fontsReady) {
+      renderNotation(node, model, width);
+      svg = node.querySelector('svg');
+    } else {
+      svg = null;
+    }
   };
 </script>
 

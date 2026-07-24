@@ -3,6 +3,7 @@
   import Staff from './components/Staff.svelte';
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
+  import { exportPng, exportSvg } from '$lib/export';
   import { toNotation } from '$lib/notation/engine';
   import { clear, setBpm, toggle, type VoiceId } from '$lib/pattern';
   import { loadInitialPattern, save, shareUrl } from '$lib/persistence';
@@ -13,6 +14,8 @@
   let playing = $state(false);
   // The column the audio engine is currently sounding; null when stopped.
   let currentStep = $state<number | null>(null);
+  // The live notation SVG, bound from the Staff, that the export controls act on.
+  let staffSvg = $state<SVGSVGElement | null>(null);
   const notation = $derived(toNotation(pattern));
 
   // Seeded from the initial value; the effects below keep it in sync from here on.
@@ -57,6 +60,14 @@
       return false;
     }
   }
+
+  function handleExportSvg() {
+    if (staffSvg) void exportSvg(staffSvg);
+  }
+
+  function handleExportPng() {
+    if (staffSvg) void exportPng(staffSvg);
+  }
 </script>
 
 <main>
@@ -74,6 +85,9 @@
       onbpm={handleBpm}
       onclear={handleClear}
       oncopylink={copyLink}
+      onexportsvg={handleExportSvg}
+      onexportpng={handleExportPng}
+      canexport={staffSvg !== null}
     />
   </section>
 
@@ -82,7 +96,7 @@
   </section>
 
   <section aria-label="Notation">
-    <Staff model={notation} />
+    <Staff model={notation} bind:svg={staffSvg} />
   </section>
 </main>
 
