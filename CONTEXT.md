@@ -1,0 +1,98 @@
+# drumscore
+
+A browser sketchpad for drum loops: you draw a loop on a step grid, and the same loop
+appears as real percussion notation you can hear, share, and print. The language
+below separates the two halves deliberately — what the user _draws_ and what the staff
+_shows_ are different things, and the code keeps them apart.
+
+## Language
+
+### The loop as drawn
+
+**Pattern**:
+The drum loop the user has drawn — every hit, plus the grid it sits on and its tempo.
+The single source of truth; everything else is derived from it.
+_Avoid_: beat, groove, loop, song, score, state
+
+**Voice**:
+One drum or cymbal that can be struck: kick, snare, closed hi-hat, open hi-hat, crash,
+ride. Each has its own row on the grid.
+_Avoid_: instrument, drum, track, lane, channel, row
+
+**Step**:
+One cell of time on the grid — the finest rhythmic position a hit can occupy. At v1's
+resolution a step is a sixteenth note.
+_Avoid_: tick, slot, cell, column, sixteenth
+
+**Hit**:
+One voice struck at one step. Binary: a hit is on or off, with no velocity.
+_Avoid_: note, onset, trigger, event, on-cell
+
+**Bar**:
+One measure's worth of steps on the grid. Named _bar_ on the grid side and _measure_ on
+the staff side, so it is always clear which half of the app is being talked about.
+_Avoid_: measure (reserved for the staff)
+
+**Grid dimensions**:
+The four numbers that shape the grid — steps per beat, beats per bar, beat value, bars.
+Data rather than constants, so a later version can change the resolution or the meter.
+_Avoid_: resolution, size, layout, config, settings
+
+**Seed**:
+The default beat a first-time visitor lands on: hi-hats on every eighth, kick on 1 & 3,
+snare on 2 & 4.
+_Avoid_: default pattern, demo, example, starter, preset
+
+**Playhead**:
+The column highlighted during playback, marking the step currently sounding.
+_Avoid_: cursor, marker, position indicator
+
+### The loop as written
+
+**Notation model**:
+The abstract description of what the staff shows — measures, parts, notes, rests, beams.
+Says nothing about how it is drawn; no drawing library's vocabulary appears in it.
+_Avoid_: score, sheet, IR, AST, render model
+
+**Measure**:
+One bar as written on the staff.
+_Avoid_: bar (reserved for the grid)
+
+**Part**:
+One of the two rhythms sharing the staff: **hands**, written stems up, and **feet**,
+written stems down. Each carries its own rhythm and fills its own measure with its own
+rests, so a kick never chops up a snare.
+_Avoid_: voice (that is a drum), staff, layer, line, stave
+
+**Stroke**:
+How one hit is written: the longest note value that fits the gap to the next hit in the
+same part without outlasting its own beat. Whatever silence is left over becomes rests.
+Every voice is struck this way, cymbals included.
+_Avoid_: duration, note length, hold, sustain
+
+**Notehead**:
+The glyph for one drum within a note — a cross for cymbals and hi-hats, an ordinary
+notehead for the snare and kick. A note may carry several.
+_Avoid_: note (a note is the whole stroke), glyph, head, dot
+
+**Staff position**:
+The line or space a notehead sits on, named the way notation names heights (a letter and
+an octave). On a percussion staff it identifies a drum, not a pitch.
+_Avoid_: pitch, key, note name, height, row
+
+**Chord**:
+The drums of one part struck at the same step, written as one note carrying several
+noteheads.
+_Avoid_: stack, cluster, group, simultaneity
+
+**Beam group**:
+A run of consecutive flagged notes to be drawn under one beam instead of with separate
+flags. Never crosses a beat.
+_Avoid_: beam, run, ligature, group
+
+### Sharing the loop
+
+**Encoded pattern**:
+The compact, URL-safe string form of a Pattern. One encoding serves two jobs: the payload
+of a share link, and the format the working pattern is autosaved in.
+_Avoid_: hash, permalink, serialization, save file, snapshot, blob
