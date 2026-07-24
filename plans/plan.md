@@ -13,13 +13,13 @@ Durable decisions that apply across all phases:
 - **Cells**: binary on/off, uniform velocity. Simultaneous hits across voices supported.
 - **Module boundaries** (the load-bearing decision):
   - **Pattern model** (pure) — types + single source of truth for the grid + BPM; ops: `toggle`, `clear`, `seed`.
-  - **Notation engine** (pure, no VexFlow) — `Pattern → NotationModel`. Emits an abstract IR: two rhythmic voices (stems-up "hands" = crash/ride/hi-hats/snare merged into chords; stems-down "feet" = kick). Struck hits → longest note value fitting the gap to the next hit without outlasting their own beat, remaining silence → rests; ringing hits (crash, open hi-hat) → held until the next hit, split into tied notes across quarter-note beats or where no single value spells the span; runs grouped for beaming; each notehead carries style (`x` vs normal) and staff position.
+  - **Notation engine** (pure, no VexFlow) — `Pattern → NotationModel`. Emits an abstract IR: two rhythmic voices (stems-up "hands" = crash/ride/hi-hats/snare merged into chords; stems-down "feet" = kick). Every hit → longest note value fitting the gap to the next hit without outlasting its own beat, remaining silence → rests; drums are struck, so every voice gets that same treatment (the crash and open hi-hat included); runs grouped for beaming; each notehead carries style (`x` vs normal) and staff position.
   - **Notation renderer** (thin) — `NotationModel → VexFlow SVG`. No musical logic.
   - **Audio engine** (thin) — wraps Tone.js Transport loop; play/stop, BPM; synth voices (`MembraneSynth` kick, `NoiseSynth` snare/hi-hats, `MetalSynth` cymbals/ride); emits `currentStep`.
   - **Pattern codec** (pure) — `Pattern ↔ compact URL-safe string`, round-trippable.
   - **Persistence** (thin) — localStorage autosave + URL sync on copy-link; delegates to codec.
   - **Export** (thin) — serialize rendered SVG, rasterize to PNG.
-- **Notation conventions (v1, non-configurable)**: percussion clef, 4/4, no key signature. Hands stems-up (single merged voice, chords); kick stems-down (separate voice). `x` noteheads for cymbals/hi-hats, normal for snare/kick. Struck voices (kick, snare, closed hi-hat, ride) written as a note plus rests, never sounding past their own beat; ringing voices (crash, open hi-hat) held to the next hit with split-and-tie across quarter-note beats.
+- **Notation conventions (v1, non-configurable)**: percussion clef, 4/4, no key signature. Hands stems-up (single merged voice, chords); kick stems-down (separate voice). `x` noteheads for cymbals/hi-hats, normal for snare/kick. Every voice written as a note plus rests, never sounding past its own beat; drums are struck, so the crash and open hi-hat get the same treatment as the rest.
 - **Load precedence**: URL-encoded pattern → else localStorage autosave → else seeded default beat (hi-hats on every 8th, kick on 1 & 3, snare on 2 & 4).
 - **BPM**: default 100, range 40–240.
 - **Layout**: desktop-first, responsive-friendly (not touch-tuned).
@@ -74,6 +74,8 @@ Grow the notation engine so consecutive empty steps are absorbed into the preced
 
 Extend the engine's duration logic so **ringing** voices — crash and open hi-hat — sound until the next hit instead of being cut short at the beat, and a span they hold that crosses a quarter-note beat boundary, or that doesn't map to a single note value (3, 5 or 7 sixteenths), is written as tied notes of legal values. Struck voices keep Phase 2's note-plus-rests treatment. The `NotationModel` carries tie relationships between the split notes. Table-driven tests assert the tie groups and the struck/ringing contrast on the same spans.
 
+> **Rule reversed after Phase 4.** The ringing exception was later dropped: a held crash or open hi-hat still read as a sustained note, the very sound Phase 2 set out to remove. Drums are struck, so every voice now gets the note-plus-rests treatment with no exception, and ties — which only the ringing path produced — are gone from the engine, model and renderer. The acceptance criteria below record what Phase 3 originally shipped.
+
 ### Acceptance criteria
 
 - [x] Ringing voices (crash, open hi-hat) are held until the next hit; struck voices are not.
@@ -91,7 +93,7 @@ Extend the engine's duration logic so **ringing** voices — crash and open hi-h
 
 ### What to build
 
-Split the engine output into the two conventional rhythmic voices: **hands** (crash, ride, hi-hats, snare) stems-up, merged so simultaneous hits at the same step become a single chord; and **feet** (kick) stems-down as a separate voice. Durations then come from each voice's own hits rather than the merged step list, and the struck/ringing policy applies per voice instead of per step. Each notehead carries its style (`x` for cymbals/hi-hats, normal for snare/kick) and its staff position per percussion convention. The renderer draws percussion clef, both voices, and per-notehead styles. This is where the output first looks like real drum sheet music.
+Split the engine output into the two conventional rhythmic voices: **hands** (crash, ride, hi-hats, snare) stems-up, merged so simultaneous hits at the same step become a single chord; and **feet** (kick) stems-down as a separate voice. Durations then come from each voice's own hits rather than the merged step list, and the struck note-plus-rests policy applies per voice instead of per step. Each notehead carries its style (`x` for cymbals/hi-hats, normal for snare/kick) and its staff position per percussion convention. The renderer draws percussion clef, both voices, and per-notehead styles. This is where the output first looks like real drum sheet music.
 
 ### Acceptance criteria
 

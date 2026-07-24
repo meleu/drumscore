@@ -38,10 +38,10 @@ is a static site with no accounts and no backend.
 6. As a drummer, I want consecutive empty steps to be absorbed into longer notes and
    rests rather than shown as a wall of sixteenth notes, so that the notation is
    readable.
-7. As a drummer, I want struck voices written as a note that never outlasts its own
-   beat followed by rests, and ringing voices (crash, open hi-hat) held until the next
-   hit with ties where no single note value spells the span, so that the rhythm reads
-   the way drum music is actually written.
+7. As a drummer, I want every voice written as a note that never outlasts its own beat
+   followed by rests — drums are struck, not held, so the same treatment applies to all
+   voices, the crash and open hi-hat included — so that the rhythm reads the way drum
+   music is actually written.
 8. As a drummer, I want runs of hits to be automatically beamed, so that the notation
    is clean and conventional.
 9. As a drummer, I want to press play and hear my loop, so that I can judge the feel,
@@ -105,12 +105,10 @@ is a static site with no accounts and no backend.
 - **Notation engine** — the core deep module. Pure function `Pattern → NotationModel`,
   with **no VexFlow dependency**. It outputs an abstract intermediate representation:
   two rhythmic voices (stems-up "hands" = crash/ride/hi-hats/snare merged into chords;
-  stems-down "feet" = kick), where a struck hit is written as the longest note value
-  that fits the gap to the next hit without outlasting its own beat and the remaining
-  silence becomes rests, a ringing hit (crash, open hi-hat) is held until the next hit
-  and split into tied notes when it crosses a beat boundary or no single note value
-  spells it, runs are grouped for beaming, and each notehead carries its style (`x` vs
-  normal) and staff position.
+  stems-down "feet" = kick), where every hit is written as the longest note value that
+  fits the gap to the next hit without outlasting its own beat and the remaining silence
+  becomes rests, runs are grouped for beaming, and each notehead carries its style (`x`
+  vs normal) and staff position.
 
 **Modules — thin adapters / glue:**
 - **Notation renderer** — translates `NotationModel → VexFlow SVG` draw calls. Contains
@@ -132,9 +130,8 @@ is a static site with no accounts and no backend.
 - Hands (crash, ride, hi-hats, snare) render stems-up as a single merged voice with
   chords; kick renders stems-down as a separate voice.
 - Cymbals and hi-hats use `x` noteheads; snare and kick use normal noteheads.
-- Struck voices (kick, snare, closed hi-hat, ride) are written as a note plus rests and
-  never sound past their own beat; ringing voices (crash, open hi-hat) are held until
-  the next hit, split and tied across quarter-note beats where needed.
+- Every voice is written as a note plus rests and never sounds past its own beat; drums
+  are struck, so the crash and open hi-hat get the same treatment as the rest.
 
 **Load precedence:** URL-encoded pattern (if present) → else localStorage autosave (if
 present) → else the seeded default beat (a basic rock beat: hi-hats on every 8th, kick
@@ -150,12 +147,12 @@ modules are the test targets because they carry all the risk and need no browser
   known patterns, asserting the resulting notation model. Coverage includes: an empty
   bar (full-bar rests), four-on-the-floor, a straight-8ths hi-hat line collapsing to
   eighth notes rather than sixteenths-plus-rests, a backbeat snare on 2 & 4,
-  syncopated hits, struck hits whose gap outlasts their beat (asserting the note plus
-  rests), ringing hits crossing a quarter-note beat boundary (asserting ties), ringing
-  spans that don't map to a single note value (asserting ties), simultaneous hits
+  syncopated hits, hits whose gap outlasts their beat (asserting the note plus rests),
+  spans that don't map to a single note value (asserting the note plus rests), the
+  crash and open hi-hat struck the same way as every other voice, simultaneous hits
   across voices (asserting chords with correct per-notehead styles and staff
-  positions), and correct beam grouping. Assertions target durations, ties, notehead
-  styles, staff positions, and beam groups.
+  positions), and correct beam grouping. Assertions target durations, notehead styles,
+  staff positions, and beam groups.
 - **Pattern codec** (`Pattern ↔ string`): round-trip tests asserting
   `decode(encode(p)) === p` across representative patterns (empty, full, seeded,
   varied BPM), plus tolerance of malformed/absent input (falls back cleanly).

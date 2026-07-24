@@ -34,30 +34,37 @@
 </path>
 </g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="76" y="87"></text>
+<text stroke="none" font-size="30pt" x="76" y="87"></text>
 </g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="76" y="62"></text>
+<text stroke="none" font-size="30pt" x="76" y="62"></text>
 </g>
-<rect x="76" y="27" width="13" height="66" opacity="0" pointer-events="auto">
+<rect x="76" y="27" width="12" height="66" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="171.25" y="92"></text>
+</g>
+<rect x="171.25" y="77" width="11" height="30" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
 <g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M288.929 72L288.929 37">
+<path stroke-width="1.5" fill="none" d="M277.75 72L277.75 37">
 </path>
 </g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="277.679" y="72"></text>
+<text stroke="none" font-size="30pt" x="266.5" y="72"></text>
 </g>
-<rect x="277.679" y="37" width="12" height="40" opacity="0" pointer-events="auto">
+<rect x="266.5" y="37" width="12" height="40" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="378.519" y="92"></text>
+<text stroke="none" font-size="30pt" x="361.75" y="92"></text>
 </g>
-<rect x="378.519" y="77" width="11" height="30" opacity="0" pointer-events="auto">
+<rect x="361.75" y="77" width="11" height="30" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
@@ -73,16 +80,9 @@
 </g>
 <g class="vf-stavenote">
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="176.84" y="107"></text>
+<text stroke="none" font-size="30pt" x="266.5" y="107"></text>
 </g>
-<rect x="176.84" y="92" width="11" height="30" opacity="0" pointer-events="auto">
-</rect>
-</g>
-<g class="vf-stavenote">
-<g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="277.679" y="107"></text>
-</g>
-<rect x="277.679" y="101" width="11" height="6" opacity="0" pointer-events="auto">
+<rect x="266.5" y="101" width="11" height="6" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stave">

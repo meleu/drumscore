@@ -19,18 +19,11 @@ import type {
  * by the kick playing underneath it, and each fills its own measure with its own rests.
  * Drums struck together in the same part become one chord.
  *
- * Within a part, drums are struck, not held: a stroke is written as a note no longer than
- * its own beat and the time until the next hit is filled with rests. That is what turns a
- * grid of 16th-note cells into readable rhythm while keeping the pulse visible.
- *
- * Cymbals that ring on — the crash and the open hi-hat — are the exception. They are
- * written as sounding until the next hit, and a span no single note value can spell,
- * because it crosses a beat or is simply an odd number of steps, becomes legal values
- * joined by ties.
+ * Every voice is struck, not held: a stroke is written as a note no longer than its own
+ * beat and the time until the next hit is filled with rests. That is what turns a grid of
+ * 16th-note cells into readable rhythm while keeping the pulse visible, and it is the same
+ * treatment for every drum — the crash and the open hi-hat included.
  */
-
-/** The voices left ringing rather than damped, and so written as held notes. */
-const RINGING: readonly VoiceId[] = ['openHiHat', 'crash'];
 
 /** Where each drum sits on the staff, and what its notehead looks like. */
 const NOTEHEADS: Readonly<Record<VoiceId, Notehead>> = {
@@ -139,10 +132,6 @@ function split(table: Duration[], step: number, length: number): Piece[] {
   return pieces;
 }
 
-function lengthOf(pieces: Piece[]): number {
-  return pieces.reduce((total, piece) => total + piece.steps, 0);
-}
-
 function restsFor(table: Duration[], part: Part, step: number, length: number): NotationEvent[] {
   return split(table, step, length).map(({ step: at, value }) => ({
     kind: 'rest',
@@ -152,35 +141,17 @@ function restsFor(table: Duration[], part: Part, step: number, length: number): 
   }));
 }
 
-/** The pieces of one stroke, tied so that together they still read as a single hit. */
-function notesFrom(pieces: Piece[], noteheads: Notehead[]): NotationEvent[] {
-  return pieces.map(({ step, value }, index) => ({
-    kind: 'note',
-    step,
-    value,
-    tiedToNext: index < pieces.length - 1,
-    noteheads,
-  }));
-}
-
 interface Hit {
   step: number;
-  /** A ringing voice was struck here, so the hit is held instead of cut short. */
-  rings: boolean;
   noteheads: Notehead[];
 }
 
 /**
- * How one hit is written, as the pieces it occupies.
- *
- * A ringing cymbal is held until the next hit, in tied pieces when no single value
- * spells the span. Every other voice is struck: the longest value that fits the gap
- * without outlasting its own beat, leaving the remainder to be filled with rests.
+ * How one hit is written: the longest value that fits the gap to the next hit without
+ * outlasting its own beat. Drums are struck, so what is left of the gap becomes rests.
  */
-function strokeFor(table: Duration[], hit: Hit, gap: number, beatSteps: number): Piece[] {
-  if (hit.rings) return split(table, hit.step, gap);
-
-  return [{ step: hit.step, ...longestFit(table, hit.step, Math.min(gap, beatSteps)) }];
+function strokeFor(table: Duration[], hit: Hit, gap: number, beatSteps: number): Duration {
+  return longestFit(table, hit.step, Math.min(gap, beatSteps));
 }
 
 const DIATONIC: readonly string[] = ['c', 'd', 'e', 'f', 'g', 'a', 'b'];
@@ -218,13 +189,7 @@ function hitsIn(pattern: Pattern, part: Part, bar: number, barLength: number): H
     const at = bar * barLength + step;
     const noteheads = noteheadsAt(pattern, part, at);
 
-    if (noteheads.length > 0) {
-      hits.push({
-        step,
-        rings: RINGING.some((voice) => part.voices.includes(voice) && isHit(pattern, voice, at)),
-        noteheads,
-      });
-    }
+    if (noteheads.length > 0) hits.push({ step, noteheads });
   }
 
   return hits;
@@ -243,11 +208,13 @@ function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): 
     const until = hits[index + 1]?.step ?? barLength;
     const stroke = strokeFor(table, hit, until - hit.step, stepsPerBeat);
 
-    events.push(
-      ...restsFor(table, part, filled, hit.step - filled),
-      ...notesFrom(stroke, hit.noteheads),
-    );
-    filled = hit.step + lengthOf(stroke);
+    events.push(...restsFor(table, part, filled, hit.step - filled), {
+      kind: 'note',
+      step: hit.step,
+      value: stroke.value,
+      noteheads: hit.noteheads,
+    });
+    filled = hit.step + stroke.steps;
   }
 
   events.push(...restsFor(table, part, filled, barLength - filled));

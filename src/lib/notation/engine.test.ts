@@ -37,17 +37,14 @@ const CODES: Record<NoteValue, string> = {
 };
 
 /**
- * Spell a measure out as a rhythm: `'rq q~8 8'` is a quarter rest, then a quarter note
- * tied to an eighth, then another eighth — an `r` prefix marks a rest and `~` ties one
- * stroke's pieces together. Reading the events back this way keeps the expectations below
- * short enough to check against the bar you have in your head.
+ * Spell a measure out as a rhythm: `'rq q 8'` is a quarter rest, then a quarter note, then
+ * an eighth — an `r` prefix marks a rest. Reading the events back this way keeps the
+ * expectations below short enough to check against the bar you have in your head.
  */
 function rhythm(events: NotationEvent[]): string {
   return events
     .map((event, index) => {
-      const previous = events[index - 1];
-      const tied = previous?.kind === 'note' && previous.tiedToNext;
-      const separator = index === 0 ? '' : tied ? '~' : ' ';
+      const separator = index === 0 ? '' : ' ';
 
       return separator + (event.kind === 'rest' ? 'r' : '') + CODES[event.value];
     })
@@ -153,33 +150,33 @@ describe('toNotation', () => {
       feet: ['rh q r16 16 r8', 'rw'],
     },
     {
-      name: 'a ringing crash is held for the whole bar',
+      name: 'a crash is struck like any voice, not held for the whole bar',
       hits: { crash: [0] },
-      hands: ['w', 'rw'],
+      hands: ['q rq rh', 'rw'],
       feet: ['rw', 'rw'],
     },
     {
-      name: 'a ringing hit crossing a beat boundary is split and tied at the beat',
+      name: 'a crash no longer sustains across the beat into the next hit',
       hits: { crash: [0], ride: [6] },
-      hands: ['q~8 8 rh', 'rw'],
+      hands: ['q r8 8 rh', 'rw'],
       feet: ['rw', 'rw'],
     },
     {
-      name: 'a ringing span of three sixteenths becomes an eighth tied to a sixteenth',
+      name: 'a struck open hi-hat span of three sixteenths is a note and a rest',
       hits: { openHiHat: [12, 15] },
-      hands: ['rh rq 8~16 16', 'rw'],
+      hands: ['rh rq 8 r16 16', 'rw'],
       feet: ['rw', 'rw'],
     },
     {
-      name: 'a ringing span of five sixteenths becomes a quarter tied to a sixteenth',
+      name: 'a struck open hi-hat span of five sixteenths is a note and a rest',
       hits: { openHiHat: [8, 13] },
-      hands: ['rh q~16 16~8', 'rw'],
+      hands: ['rh q r16 16 r8', 'rw'],
       feet: ['rw', 'rw'],
     },
     {
-      name: 'a ringing hit stops at the bar line rather than carrying over',
+      name: 'a struck crash near the bar line rests out to the bar line',
       hits: { crash: [13] },
-      hands: ['rh rq r16 16~8', 'rw'],
+      hands: ['rh rq r16 16 r8', 'rw'],
       feet: ['rw', 'rw'],
     },
     {
@@ -189,9 +186,9 @@ describe('toNotation', () => {
       feet: ['q rq rh', 'rw'],
     },
     {
-      name: 'a ringing hand does not hold the feet with it',
+      name: 'the hands and feet each rest out their own bar independently',
       hits: { kick: [0], crash: [0] },
-      hands: ['w', 'rw'],
+      hands: ['q rq rh', 'rw'],
       feet: ['q rq rh', 'rw'],
     },
     {
@@ -240,17 +237,6 @@ describe('toNotation', () => {
     }
   });
 
-  it.each(cases)('never ties into a rest or across the bar line: $name', ({ hits }) => {
-    for (const { parts } of toNotation(patternWith(hits)).measures) {
-      for (const { events } of parts) {
-        for (const [index, event] of events.entries()) {
-          if (event.kind === 'note' && event.tiedToNext)
-            expect(events[index + 1]?.kind).toBe('note');
-        }
-      }
-    }
-  });
-
   it.each(cases)('gives every note at least one notehead: $name', ({ hits }) => {
     for (const { parts } of toNotation(patternWith(hits)).measures) {
       for (const { events } of parts) {
@@ -287,7 +273,7 @@ describe('parts', () => {
     expect(hands.events).toEqual([
       { kind: 'rest', step: 0, value: 'half', position: { step: 'b', octave: 4 } },
       { kind: 'rest', step: 8, value: 'quarter', position: { step: 'b', octave: 4 } },
-      { kind: 'note', step: 12, value: 'quarter', tiedToNext: false, noteheads: [SNARE] },
+      { kind: 'note', step: 12, value: 'quarter', noteheads: [SNARE] },
     ]);
   });
 });
@@ -323,13 +309,6 @@ describe('noteheads', () => {
     const pattern = patternWith({ closedHiHat: [0], openHiHat: [0] });
 
     expect(firstChord(pattern, 'hands')).toEqual([CLOSED_HI_HAT]);
-  });
-
-  it("repeats a stroke's noteheads on every piece it is tied across", () => {
-    const hands = partOf(measureOf(patternWith({ crash: [0], ride: [6] })), 'hands');
-    const tied = hands.events.filter((event) => event.kind === 'note').slice(0, 2);
-
-    expect(tied.map(({ noteheads }) => noteheads)).toEqual([[CRASH], [CRASH]]);
   });
 });
 

@@ -1,4 +1,4 @@
-import { Formatter, Renderer, Stave, StaveNote, StaveTie, Stem, Voice } from 'vexflow';
+import { Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow';
 import type {
   NotationEvent,
   NotationModel,
@@ -61,32 +61,12 @@ const STAVE_LEFT = 10;
 const FIRST_MEASURE_EXTRA_WIDTH = 60;
 const MIN_MEASURE_WIDTH = 180;
 
-interface DrawnPart {
-  voice: Voice;
-  notes: StaveNote[];
-  events: NotationEvent[];
-}
-
-function toVoice(part: NotationPart, beats: number, beatValue: number): DrawnPart {
+function toVoice(part: NotationPart, beats: number, beatValue: number): Voice {
   const notes = part.events.map((event) => toStaveNote(event, part.stemDirection));
   const voice = new Voice({ numBeats: beats, beatValue });
   voice.addTickables(notes);
 
-  return { voice, notes, events: part.events };
-}
-
-/**
- * Ties are drawn after formatting, because they span from one notehead to the next and so
- * need the positions the formatter has just settled.
- */
-function drawTies({ notes, events }: DrawnPart, context: ReturnType<Renderer['getContext']>) {
-  for (const [index, event] of events.entries()) {
-    if (event.kind !== 'note' || !event.tiedToNext) continue;
-
-    new StaveTie({ firstNote: notes[index], lastNote: notes[index + 1] })
-      .setContext(context)
-      .draw();
-  }
+  return voice;
 }
 
 export function renderNotation(container: HTMLDivElement, model: NotationModel, width: number) {
@@ -117,22 +97,17 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
     }
     stave.setContext(context).draw();
 
-    const parts = measure.parts
+    const voices = measure.parts
       .filter((part) => part.events.length > 0)
       .map((part) => toVoice(part, beats, beatValue));
 
-    if (parts.length > 0) {
-      const voices = parts.map(({ voice }) => voice);
-
+    if (voices.length > 0) {
       // formatToStave measures the room left after the clef and time signature, so the
       // first measure's notes stay clear of them. Joining the parts first lines the hands
       // up with the feet, so simultaneous strokes share a column.
       new Formatter().joinVoices(voices).formatToStave(voices, stave);
 
-      for (const part of parts) {
-        part.voice.draw(context, stave);
-        drawTies(part, context);
-      }
+      for (const voice of voices) voice.draw(context, stave);
     }
 
     x += measureWidth;
