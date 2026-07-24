@@ -5,12 +5,14 @@ import type { NotationEvent, NotationMeasure, NotationModel, NoteValue } from '.
  * Translate a pattern into the notation model.
  *
  * A hit sounds until the next one, so each note's written duration is the gap that
- * follows it — that is what turns a grid of 16th-note cells into readable rhythm.
- * Anything the gap leaves over, and any space before the first hit, becomes rests.
+ * follows it — that is what turns a grid of 16th-note cells into readable rhythm. Only
+ * the space before a measure's first hit is left silent, as rests.
  *
- * Still one merged voice: per-voice noteheads, chords, and beaming arrive later. Gaps
- * that no single note value can express are approximated here by writing the largest
- * legal note and resting out the remainder; Phase 3 replaces that remainder with ties.
+ * A gap no single note value can spell — because it crosses a beat boundary, or because
+ * it is simply an odd number of steps — is written as legal values joined by ties, the
+ * way a reader expects to see it.
+ *
+ * Still one merged voice: per-voice noteheads, chords, and beaming arrive later.
  */
 
 /** How many of each note value make a whole note. */
@@ -58,18 +60,45 @@ function longestFit(table: Duration[], step: number, length: number): Duration {
   return fit;
 }
 
-/** Cover `length` steps from `step` with as few rests as the alignment rule allows. */
-function restsFor(table: Duration[], step: number, length: number): NotationEvent[] {
-  const rests: NotationEvent[] = [];
+interface Piece {
+  step: number;
+  value: NoteValue;
+}
+
+/**
+ * Cover `length` steps from `step` with as few legal values as the alignment rule
+ * allows.
+ *
+ * Because each piece has to be able to start where the previous one ended, the splits
+ * land on the metrical boundaries a reader looks for: a span crossing a beat is cut at
+ * that beat, and a span of 3, 5 or 7 sixteenths comes back as the pieces summing to it.
+ */
+function split(table: Duration[], step: number, length: number): Piece[] {
+  const pieces: Piece[] = [];
 
   for (let at = step, left = length; left > 0;) {
     const { value, steps } = longestFit(table, at, left);
-    rests.push({ kind: 'rest', step: at, value });
+    pieces.push({ step: at, value });
     at += steps;
     left -= steps;
   }
 
-  return rests;
+  return pieces;
+}
+
+function restsFor(table: Duration[], step: number, length: number): NotationEvent[] {
+  return split(table, step, length).map((piece) => ({ kind: 'rest', ...piece }));
+}
+
+/** One sustained hit, as pieces tied together so they still read as a single stroke. */
+function notesFor(table: Duration[], step: number, length: number): NotationEvent[] {
+  const pieces = split(table, step, length);
+
+  return pieces.map((piece, index) => ({
+    kind: 'note',
+    ...piece,
+    tiedToNext: index < pieces.length - 1,
+  }));
 }
 
 /** The steps of one bar that carry a hit, as indices relative to that bar. */
@@ -86,23 +115,17 @@ function hitSteps(pattern: Pattern, bar: number, barLength: number): number[] {
 function measureFor(pattern: Pattern, bar: number, table: Duration[]): NotationMeasure {
   const barLength = stepsPerBar(pattern.dimensions);
   const hits = hitSteps(pattern, bar, barLength);
-  const events: NotationEvent[] = [];
 
-  // Where the measure is filled up to. A note may fall short of the next hit when no
-  // single value spans the gap, which is what leaves room for the rests in between.
-  let filled = 0;
+  // Every hit sounds until the next one, so the only silence a measure can hold is the
+  // stretch before its first hit — or, with no hits at all, the whole measure.
+  const [first = barLength] = hits;
+  const events: NotationEvent[] = restsFor(table, 0, first);
 
   for (const [index, step] of hits.entries()) {
-    events.push(...restsFor(table, filled, step - filled));
-
     // Notes stop at the bar line; a hit's tail never carries into the next measure.
     const until = hits[index + 1] ?? barLength;
-    const { value, steps } = longestFit(table, step, until - step);
-    events.push({ kind: 'note', step, value });
-    filled = step + steps;
+    events.push(...notesFor(table, step, until - step));
   }
-
-  events.push(...restsFor(table, filled, barLength - filled));
 
   return { events };
 }

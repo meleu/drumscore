@@ -37,20 +37,27 @@ function valueOf(code: string): NoteValue {
 }
 
 /**
- * Spell a measure out as a rhythm: `'rq q rq q'` is a quarter rest, a quarter note,
- * another quarter rest and another quarter note — an `r` prefix marks a rest. Steps
- * come from laying the events end to end, which is exactly how a measure is read.
+ * Spell a measure out as a rhythm: `'rq q~8 8'` is a quarter rest, then a quarter note
+ * tied to an eighth, then another eighth — an `r` prefix marks a rest and `~` ties one
+ * stroke's pieces together. Steps come from laying the events end to end, which is
+ * exactly how a measure is read.
  */
 function measure(spec: string): NotationEvent[] {
   let step = 0;
 
-  return spec.split(' ').map((token) => {
+  return spec.split(' ').flatMap((token) => {
     const isRest = token.startsWith('r');
-    const value = valueOf(isRest ? token.slice(1) : token);
-    const event: NotationEvent = { kind: isRest ? 'rest' : 'note', step, value };
-    step += STEPS[value];
+    const codes = (isRest ? token.slice(1) : token).split('~');
 
-    return event;
+    return codes.map((code, index): NotationEvent => {
+      const value = valueOf(code);
+      const event: NotationEvent = isRest
+        ? { kind: 'rest', step, value }
+        : { kind: 'note', step, value, tiedToNext: index < codes.length - 1 };
+      step += STEPS[value];
+
+      return event;
+    });
   });
 }
 
@@ -80,14 +87,29 @@ describe('toNotation', () => {
       expected: ['8 8 8 8 8 8 8 8', 'rw'],
     },
     {
-      name: 'a backbeat rests through the beats before each snare',
+      name: 'a backbeat rests up to the first snare, then holds across the beats',
       hits: { snare: [4, 12] },
-      expected: ['rq q rq q', 'rw'],
+      expected: ['rq q~q q', 'rw'],
     },
     {
       name: 'syncopated hits keep their off-beat placement',
       hits: { kick: [0, 3, 6] },
-      expected: ['8 r16 16 r8 8 rh', 'rw'],
+      expected: ['8~16 16~8 8~h', 'rw'],
+    },
+    {
+      name: 'a hit held across a beat boundary is split and tied at the beat',
+      hits: { kick: [6, 10] },
+      expected: ['rq r8 8~8 8~q', 'rw'],
+    },
+    {
+      name: 'a span of three sixteenths becomes an eighth tied to a sixteenth',
+      hits: { kick: [12, 15] },
+      expected: ['rh rq 8~16 16', 'rw'],
+    },
+    {
+      name: 'a span of five sixteenths becomes a quarter tied to a sixteenth',
+      hits: { kick: [8, 13] },
+      expected: ['rh q~16 16~8', 'rw'],
     },
     {
       name: 'a hit near the end of a bar is cut off by the bar line',
@@ -107,7 +129,7 @@ describe('toNotation', () => {
     {
       name: 'steps in the second bar are numbered relative to that bar',
       hits: { snare: [20, 28] },
-      expected: ['rw', 'rq q rq q'],
+      expected: ['rw', 'rq q~q q'],
     },
   ];
 
@@ -127,6 +149,14 @@ describe('toNotation', () => {
 
       expect(total).toBe(barLength);
       expect(events.map(({ step }) => step)).toEqual(runningTotals(lengths));
+    }
+  });
+
+  it.each(cases)('never ties into a rest or across the bar line: $name', ({ hits }) => {
+    for (const { events } of toNotation(patternWith(hits)).measures) {
+      for (const [index, event] of events.entries()) {
+        if (event.kind === 'note' && event.tiedToNext) expect(events[index + 1]?.kind).toBe('note');
+      }
     }
   });
 });

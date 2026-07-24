@@ -60,7 +60,7 @@ Grow the notation engine so consecutive empty steps are absorbed into the preced
 - [x] Steps before the first hit render as rest(s) of correct duration; a fully empty bar renders as full-bar rest(s).
 - [x] Straight 8ths collapse to eighth notes (not 16th + 16th-rest); four-on-the-floor collapses to quarter notes.
 - [x] Vitest table covers: empty bar, four-on-the-floor, straight-8ths, backbeat, a syncopated pattern — asserting durations and rests.
-- [ ] Staff visibly reflects the collapsed durations. _(renderer draws rests and collapsed values; not yet confirmed on screen)_
+- [x] Staff visibly reflects the collapsed durations.
 
 ---
 
@@ -74,11 +74,11 @@ Extend the engine's duration logic so a gap that crosses a quarter-note beat bou
 
 ### Acceptance criteria
 
-- [ ] A note whose duration spans across a quarter-note beat boundary is split into tied notes at the boundary.
-- [ ] A duration not expressible as one note value is decomposed into legal values joined by ties.
-- [ ] `NotationModel` explicitly represents ties between the resulting notes.
-- [ ] Vitest cases assert tie groups for at least: a hit sustained across a beat boundary, and a 3- and 5-sixteenth duration.
-- [ ] Renderer draws the ties on the staff.
+- [x] A note whose duration spans across a quarter-note beat boundary is split into tied notes at the boundary.
+- [x] A duration not expressible as one note value is decomposed into legal values joined by ties.
+- [x] `NotationModel` explicitly represents ties between the resulting notes.
+- [x] Vitest cases assert tie groups for at least: a hit sustained across a beat boundary, and a 3- and 5-sixteenth duration.
+- [x] Renderer draws the ties on the staff.
 
 ---
 

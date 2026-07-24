@@ -1,4 +1,4 @@
-import { Formatter, Renderer, Stave, StaveNote, Voice } from 'vexflow';
+import { Formatter, Renderer, Stave, StaveNote, StaveTie, Voice } from 'vexflow';
 import type { NotationEvent, NotationModel, NoteValue } from './model';
 
 /**
@@ -77,13 +77,24 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
     stave.setContext(context).draw();
 
     if (measure.events.length > 0) {
+      const notes = measure.events.map(toStaveNote);
       const voice = new Voice({ numBeats: beats, beatValue });
-      voice.addTickables(measure.events.map(toStaveNote));
+      voice.addTickables(notes);
 
       // formatToStave measures the room left after the clef and time signature, so the
       // first measure's notes stay clear of them.
       new Formatter().joinVoices([voice]).formatToStave([voice], stave);
       voice.draw(context, stave);
+
+      // Ties are drawn last: they span from one notehead to the next, so they need the
+      // positions the formatter has just settled.
+      for (const [index, event] of measure.events.entries()) {
+        if (event.kind !== 'note' || !event.tiedToNext) continue;
+
+        new StaveTie({ firstNote: notes[index], lastNote: notes[index + 1] })
+          .setContext(context)
+          .draw();
+      }
     }
 
     x += measureWidth;
