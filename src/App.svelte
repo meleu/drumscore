@@ -4,9 +4,11 @@
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
   import { toNotation } from '$lib/notation/engine';
-  import { clear, seed, setBpm, toggle, type VoiceId } from '$lib/pattern';
+  import { clear, setBpm, toggle, type VoiceId } from '$lib/pattern';
+  import { loadInitialPattern, save, shareUrl } from '$lib/persistence';
 
-  const initialPattern = seed();
+  // Load precedence (URL -> autosave -> seed) lives in the persistence module.
+  const initialPattern = loadInitialPattern();
   let pattern = $state(initialPattern);
   let playing = $state(false);
   // The column the audio engine is currently sounding; null when stopped.
@@ -21,6 +23,9 @@
   $effect(() => engine.setPattern(pattern));
   $effect(() => engine.setBpm(pattern.bpm));
   $effect(() => () => engine.dispose());
+
+  // Autosave every edit so a refresh restores the working pattern.
+  $effect(() => save(pattern));
 
   function handleToggle(voice: VoiceId, step: number) {
     pattern = toggle(pattern, voice, step);
@@ -43,6 +48,15 @@
   function handleClear() {
     pattern = clear(pattern);
   }
+
+  async function copyLink(): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(shareUrl(pattern));
+      return true;
+    } catch {
+      return false;
+    }
+  }
 </script>
 
 <main>
@@ -59,6 +73,7 @@
       onstop={stop}
       onbpm={handleBpm}
       onclear={handleClear}
+      oncopylink={copyLink}
     />
   </section>
 

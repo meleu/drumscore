@@ -118,18 +118,21 @@ numbers) and locked down by colocated Vitest cases.
 
 ---
 
-## Phase 9: Persistence + share link + load precedence (codec)
+## Phase 9: Persistence + share link + load precedence (codec) — **Done**
 
 **User stories**: 17, 18, 19, 20
 
 Pure Pattern codec (`Pattern ↔ compact URL-safe string`, round-trippable, tolerant of
-bad input). Persistence: localStorage autosave on change, URL sync on Copy link, and the
-precedence resolver (URL → autosave → seed).
+bad input): a byte layout of `[version, dims…, bpm, packed cells]` behind a hand-rolled
+base64url (no `Buffer`/`btoa`, so it runs in browser and Node alike). Persistence (thin):
+localStorage autosave on every edit, `?p=` share URL on Copy link, and the precedence
+resolver (URL → autosave → seed). Transport gains a Copy link button with transient
+"Copied!" feedback.
 
-- [ ] `decode(encode(p)) === p` for empty, full, seeded, varied-BPM (Vitest).
-- [ ] Malformed/absent input falls back cleanly (autosave or seed).
-- [ ] Editing autosaves; refresh restores; Copy link encodes exact pattern + tempo.
-- [ ] Opening a shared/saved link loads that exact pattern + tempo, taking precedence over autosave and seed.
+- [x] `decode(encode(p)) === p` for empty, full, seeded, varied-BPM (Vitest).
+- [x] Malformed/absent input falls back cleanly (autosave or seed).
+- [x] Editing autosaves; refresh restores; Copy link encodes exact pattern + tempo.
+- [x] Opening a shared/saved link loads that exact pattern + tempo, taking precedence over autosave and seed.
 
 ---
 
@@ -142,3 +145,27 @@ SVG / Export PNG controls into the transport.
 
 - [ ] Export SVG downloads a crisp scalable copy; Export PNG downloads a raster image.
 - [ ] Both reflect the exact notation currently on screen.
+
+---
+
+## Phase 11: Bundle notation fonts locally (offline-capable static site)
+
+**User stories**: 24 (reinforces "fast static page, no wait"); supports the PRD's
+"fully static, no backend" goal.
+
+VexFlow loads its music fonts lazily from a CDN (`Font.HOST_URL` →
+`https://cdn.jsdelivr.net/npm/@vexflow-fonts/`), so the app makes a runtime
+third-party request and the staff cannot render before that request lands. The
+Staff component already preloads the configured fonts (Bravura + Academico) and
+holds the first draw until they resolve, but the bytes still come from jsdelivr.
+This phase ships those fonts inside the bundle so the app renders offline with no
+external dependency, and no first-paint dependence on network latency.
+
+- [ ] The two configured fonts (Bravura, Academico) are vendored into the repo/bundle (e.g. from the `@vexflow-fonts` packages) and served from the app's own origin under `base: /drumscore/`.
+- [ ] VexFlow resolves fonts to the local assets, not the CDN (override `Font.HOST_URL` or register the `FontFace`s ourselves before first render); no request to `cdn.jsdelivr.net` occurs at runtime.
+- [ ] `pnpm build` output loads and renders the staff correctly with the network offline / blocked.
+- [ ] Font handling stays isolated to the renderer/Staff boundary; the pure modules remain untouched.
+
+**Unresolved questions**
+- Vendor the woff2 via an npm dependency (`@vexflow-fonts/*`) resolved through Vite's asset pipeline, or commit the files directly under a static assets dir? (Leaning: npm dep + Vite `?url` import, to keep licensing/provenance clear and updates tractable.)
+- Confirm the license terms for Bravura (SIL OFL) and Academico permit redistribution in the bundle — expected fine, worth noting in the repo.

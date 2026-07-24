@@ -8,9 +8,22 @@
     onstop: () => void;
     onbpm: (bpm: number) => void;
     onclear: () => void;
+    oncopylink: () => Promise<boolean>;
   }
 
-  let { playing, bpm, onplay, onstop, onbpm, onclear }: Props = $props();
+  let { playing, bpm, onplay, onstop, onbpm, onclear, oncopylink }: Props = $props();
+
+  // Transient confirmation shown on the Copy link button after a successful copy.
+  let copied = $state(false);
+  let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function handleCopyLink() {
+    const ok = await oncopylink();
+    if (!ok) return;
+    copied = true;
+    clearTimeout(copiedTimer);
+    copiedTimer = setTimeout(() => (copied = false), 1500);
+  }
 </script>
 
 <div class="transport">
@@ -38,6 +51,10 @@
   </label>
 
   <button type="button" class="clear" onclick={() => onclear()}> Clear </button>
+
+  <button type="button" class="copy" onclick={handleCopyLink}>
+    {copied ? 'Copied!' : 'Copy link'}
+  </button>
 </div>
 
 <style>
@@ -85,7 +102,8 @@
     color: var(--color-text);
   }
 
-  .clear {
+  .clear,
+  .copy {
     padding: 0.5rem 1rem;
     border: 1px solid var(--color-border);
     border-radius: 6px;
@@ -94,7 +112,8 @@
     cursor: pointer;
   }
 
-  .clear:focus-visible {
+  .clear:focus-visible,
+  .copy:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
