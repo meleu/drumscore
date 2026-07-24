@@ -13,13 +13,13 @@ Durable decisions that apply across all phases:
 - **Cells**: binary on/off, uniform velocity. Simultaneous hits across voices supported.
 - **Module boundaries** (the load-bearing decision):
   - **Pattern model** (pure) — types + single source of truth for the grid + BPM; ops: `toggle`, `clear`, `seed`.
-  - **Notation engine** (pure, no VexFlow) — `Pattern → NotationModel`. Emits an abstract IR: two rhythmic voices (stems-up "hands" = crash/ride/hi-hats/snare merged into chords; stems-down "feet" = kick). Each note's duration = gap until next hit; leading gaps → rests; durations crossing quarter-note beats or not mapping to a single note value → tied notes; runs grouped for beaming; each notehead carries style (`x` vs normal) and staff position.
+  - **Notation engine** (pure, no VexFlow) — `Pattern → NotationModel`. Emits an abstract IR: two rhythmic voices (stems-up "hands" = crash/ride/hi-hats/snare merged into chords; stems-down "feet" = kick). Struck hits → longest note value fitting the gap to the next hit without outlasting their own beat, remaining silence → rests; ringing hits (crash, open hi-hat) → held until the next hit, split into tied notes across quarter-note beats or where no single value spells the span; runs grouped for beaming; each notehead carries style (`x` vs normal) and staff position.
   - **Notation renderer** (thin) — `NotationModel → VexFlow SVG`. No musical logic.
   - **Audio engine** (thin) — wraps Tone.js Transport loop; play/stop, BPM; synth voices (`MembraneSynth` kick, `NoiseSynth` snare/hi-hats, `MetalSynth` cymbals/ride); emits `currentStep`.
   - **Pattern codec** (pure) — `Pattern ↔ compact URL-safe string`, round-trippable.
   - **Persistence** (thin) — localStorage autosave + URL sync on copy-link; delegates to codec.
   - **Export** (thin) — serialize rendered SVG, rasterize to PNG.
-- **Notation conventions (v1, non-configurable)**: percussion clef, 4/4, no key signature. Hands stems-up (single merged voice, chords); kick stems-down (separate voice). `x` noteheads for cymbals/hi-hats, normal for snare/kick. Split-and-tie across quarter-note beats.
+- **Notation conventions (v1, non-configurable)**: percussion clef, 4/4, no key signature. Hands stems-up (single merged voice, chords); kick stems-down (separate voice). `x` noteheads for cymbals/hi-hats, normal for snare/kick. Struck voices (kick, snare, closed hi-hat, ride) written as a note plus rests, never sounding past their own beat; ringing voices (crash, open hi-hat) held to the next hit with split-and-tie across quarter-note beats.
 - **Load precedence**: URL-encoded pattern → else localStorage autosave → else seeded default beat (hi-hats on every 8th, kick on 1 & 3, snare on 2 & 4).
 - **BPM**: default 100, range 40–240.
 - **Layout**: desktop-first, responsive-friendly (not touch-tuned).
@@ -52,32 +52,35 @@ Stand up the Vite + TS + Svelte project with Vitest wired. Build the thinnest en
 
 ### What to build
 
-Grow the notation engine so consecutive empty steps are absorbed into the preceding note's duration instead of a wall of 16ths. Each note's duration equals the gap until the next hit in that voice; leading gaps (before the first hit, and a fully empty bar) become rests. A straight-8ths line collapses to eighth notes, four-on-the-floor to quarter notes, an empty bar to full-bar rests. Still a single melodic voice (two-voice split comes in Phase 4). Table-driven Vitest cases assert the resulting durations and rests.
+Grow the notation engine so consecutive empty steps are absorbed into the preceding note's duration instead of a wall of 16ths. A hit is written as the longest note value that fits the gap until the next hit without outlasting its own beat; the silence that follows it, and any gap before the first hit, become rests. A straight-8ths line collapses to eighth notes, four-on-the-floor to quarter notes, an empty bar to full-bar rests. Still a single melodic voice (two-voice split comes in Phase 4). Table-driven Vitest cases assert the resulting durations and rests.
+
+> **Rule revised during Phase 3.** As first written this phase made each note's duration the _whole_ gap until the next hit, which sustains drum strokes across beats — a backbeat came out as a snare on 2 held into 4. Drums are struck, so the duration is now capped at the beat and the remainder rests out. Sustain survives only for ringing voices (see Phase 3).
 
 ### Acceptance criteria
 
-- [x] Duration of each note = number of steps until the next hit (or bar/pattern end).
-- [x] Steps before the first hit render as rest(s) of correct duration; a fully empty bar renders as full-bar rest(s).
+- [x] Each note is the longest value that fits the gap to the next hit (or bar end) without outlasting its own beat.
+- [x] Steps before the first hit, and steps after a note stops sounding, render as rest(s) of correct duration; a fully empty bar renders as full-bar rest(s).
 - [x] Straight 8ths collapse to eighth notes (not 16th + 16th-rest); four-on-the-floor collapses to quarter notes.
 - [x] Vitest table covers: empty bar, four-on-the-floor, straight-8ths, backbeat, a syncopated pattern — asserting durations and rests.
 - [x] Staff visibly reflects the collapsed durations.
 
 ---
 
-## Phase 3: Ties (beat-boundary splits, non-mappable durations)
+## Phase 3: Ties (ringing voices held across beats, non-mappable durations)
 
 **User stories**: 7
 
 ### What to build
 
-Extend the engine's duration logic so a gap that crosses a quarter-note beat boundary is split and tied, and any duration that doesn't map to a single note value (e.g. a dotted-ish span of 3 or 5 or 7 sixteenths) is written as tied notes of legal values. The `NotationModel` carries tie relationships between the split notes. Table-driven tests assert the tie groups.
+Extend the engine's duration logic so **ringing** voices — crash and open hi-hat — sound until the next hit instead of being cut short at the beat, and a span they hold that crosses a quarter-note beat boundary, or that doesn't map to a single note value (3, 5 or 7 sixteenths), is written as tied notes of legal values. Struck voices keep Phase 2's note-plus-rests treatment. The `NotationModel` carries tie relationships between the split notes. Table-driven tests assert the tie groups and the struck/ringing contrast on the same spans.
 
 ### Acceptance criteria
 
-- [x] A note whose duration spans across a quarter-note beat boundary is split into tied notes at the boundary.
-- [x] A duration not expressible as one note value is decomposed into legal values joined by ties.
+- [x] Ringing voices (crash, open hi-hat) are held until the next hit; struck voices are not.
+- [x] A held span that crosses a quarter-note beat boundary is split into tied notes at the boundary.
+- [x] A span not expressible as one note value is decomposed into legal values joined by ties.
 - [x] `NotationModel` explicitly represents ties between the resulting notes.
-- [x] Vitest cases assert tie groups for at least: a hit sustained across a beat boundary, and a 3- and 5-sixteenth duration.
+- [x] Vitest cases assert tie groups for at least: a ringing hit sustained across a beat boundary, and 3- and 5-sixteenth spans — each against its struck counterpart.
 - [x] Renderer draws the ties on the staff.
 
 ---
@@ -88,11 +91,12 @@ Extend the engine's duration logic so a gap that crosses a quarter-note beat bou
 
 ### What to build
 
-Split the engine output into the two conventional rhythmic voices: **hands** (crash, ride, hi-hats, snare) stems-up, merged so simultaneous hits at the same step become a single chord; and **feet** (kick) stems-down as a separate voice. Each notehead carries its style (`x` for cymbals/hi-hats, normal for snare/kick) and its staff position per percussion convention. The renderer draws percussion clef, both voices, and per-notehead styles. This is where the output first looks like real drum sheet music.
+Split the engine output into the two conventional rhythmic voices: **hands** (crash, ride, hi-hats, snare) stems-up, merged so simultaneous hits at the same step become a single chord; and **feet** (kick) stems-down as a separate voice. Durations then come from each voice's own hits rather than the merged step list, and the struck/ringing policy applies per voice instead of per step. Each notehead carries its style (`x` for cymbals/hi-hats, normal for snare/kick) and its staff position per percussion convention. The renderer draws percussion clef, both voices, and per-notehead styles. This is where the output first looks like real drum sheet music.
 
 ### Acceptance criteria
 
 - [ ] Hands voice is stems-up; kick is a separate stems-down voice.
+- [ ] Durations are measured per voice — the gap to the next hit in the _same_ voice — instead of from the merged step list, and each voice's measure is filled with its own rests.
 - [ ] Simultaneous hands hits at one step merge into a single chord with per-notehead styles/positions.
 - [ ] Cymbals and hi-hats use `x` noteheads; snare and kick use normal noteheads.
 - [ ] Each notehead in `NotationModel` carries style + staff position.

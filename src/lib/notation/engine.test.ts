@@ -87,49 +87,69 @@ describe('toNotation', () => {
       expected: ['8 8 8 8 8 8 8 8', 'rw'],
     },
     {
-      name: 'a backbeat rests up to the first snare, then holds across the beats',
+      name: 'a backbeat is a quarter on 2 and on 4, with rests between',
       hits: { snare: [4, 12] },
-      expected: ['rq q~q q', 'rw'],
+      expected: ['rq q rq q', 'rw'],
     },
     {
       name: 'syncopated hits keep their off-beat placement',
       hits: { kick: [0, 3, 6] },
-      expected: ['8~16 16~8 8~h', 'rw'],
+      expected: ['8 r16 16 r8 8 rh', 'rw'],
     },
     {
-      name: 'a hit held across a beat boundary is split and tied at the beat',
+      name: 'a struck hit never sounds past its own beat',
       hits: { kick: [6, 10] },
-      expected: ['rq r8 8~8 8~q', 'rw'],
+      expected: ['rq r8 8 r8 8 rq', 'rw'],
     },
     {
-      name: 'a span of three sixteenths becomes an eighth tied to a sixteenth',
+      name: 'a struck span of three sixteenths is a note and a rest',
       hits: { kick: [12, 15] },
-      expected: ['rh rq 8~16 16', 'rw'],
+      expected: ['rh rq 8 r16 16', 'rw'],
     },
     {
-      name: 'a span of five sixteenths becomes a quarter tied to a sixteenth',
+      name: 'a struck span of five sixteenths is a note and a rest',
       hits: { kick: [8, 13] },
-      expected: ['rh q~16 16~8', 'rw'],
+      expected: ['rh q r16 16 r8', 'rw'],
     },
     {
-      name: 'a hit near the end of a bar is cut off by the bar line',
-      hits: { kick: [12] },
-      expected: ['rh rq q', 'rw'],
-    },
-    {
-      name: 'the last hit of a bar runs to the bar line',
+      name: 'a ringing crash is held for the whole bar',
       hits: { crash: [0] },
       expected: ['w', 'rw'],
     },
     {
+      name: 'a ringing hit crossing a beat boundary is split and tied at the beat',
+      hits: { crash: [0], kick: [6] },
+      expected: ['q~8 8 rh', 'rw'],
+    },
+    {
+      name: 'a ringing span of three sixteenths becomes an eighth tied to a sixteenth',
+      hits: { openHiHat: [12, 15] },
+      expected: ['rh rq 8~16 16', 'rw'],
+    },
+    {
+      name: 'a ringing span of five sixteenths becomes a quarter tied to a sixteenth',
+      hits: { openHiHat: [8, 13] },
+      expected: ['rh q~16 16~8', 'rw'],
+    },
+    {
+      name: 'a ringing hit stops at the bar line rather than carrying over',
+      hits: { crash: [13] },
+      expected: ['rh rq r16 16~8', 'rw'],
+    },
+    {
       name: 'simultaneous hits on different voices collapse into a single note',
-      hits: { kick: [0], closedHiHat: [0], crash: [0] },
+      hits: { kick: [0], snare: [0], closedHiHat: [0] },
+      expected: ['q rq rh', 'rw'],
+    },
+    {
+      name: 'a step where a ringing voice sounds is held, struck voices notwithstanding',
+      hits: { kick: [0], crash: [0] },
       expected: ['w', 'rw'],
     },
     {
       name: 'steps in the second bar are numbered relative to that bar',
       hits: { snare: [20, 28] },
-      expected: ['rw', 'rq q~q q'],
+      expected: ['rw', 'rq q rq q'],
     },
   ];
 

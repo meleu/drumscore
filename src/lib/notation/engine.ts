@@ -1,19 +1,30 @@
-import { hasHitAt, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
+import {
+  hasHitAt,
+  isHit,
+  stepsPerBar,
+  type GridDimensions,
+  type Pattern,
+  type VoiceId,
+} from '$lib/pattern';
 import type { NotationEvent, NotationMeasure, NotationModel, NoteValue } from './model';
 
 /**
  * Translate a pattern into the notation model.
  *
- * A hit sounds until the next one, so each note's written duration is the gap that
- * follows it — that is what turns a grid of 16th-note cells into readable rhythm. Only
- * the space before a measure's first hit is left silent, as rests.
+ * Drums are struck, not held: a stroke is written as a note no longer than its own beat
+ * and the time until the next hit is filled with rests. That is what turns a grid of
+ * 16th-note cells into readable rhythm while keeping the pulse visible.
  *
- * A gap no single note value can spell — because it crosses a beat boundary, or because
- * it is simply an odd number of steps — is written as legal values joined by ties, the
- * way a reader expects to see it.
+ * Cymbals that ring on — the crash and the open hi-hat — are the exception. They are
+ * written as sounding until the next hit, and a span no single note value can spell,
+ * because it crosses a beat or is simply an odd number of steps, becomes legal values
+ * joined by ties.
  *
  * Still one merged voice: per-voice noteheads, chords, and beaming arrive later.
  */
+
+/** The voices left ringing rather than damped, and so written as held notes. */
+const RINGING: readonly VoiceId[] = ['openHiHat', 'crash'];
 
 /** How many of each note value make a whole note. */
 const VALUES_PER_WHOLE: readonly [NoteValue, number][] = [
@@ -60,9 +71,8 @@ function longestFit(table: Duration[], step: number, length: number): Duration {
   return fit;
 }
 
-interface Piece {
+interface Piece extends Duration {
   step: number;
-  value: NoteValue;
 }
 
 /**
@@ -77,55 +87,88 @@ function split(table: Duration[], step: number, length: number): Piece[] {
   const pieces: Piece[] = [];
 
   for (let at = step, left = length; left > 0;) {
-    const { value, steps } = longestFit(table, at, left);
-    pieces.push({ step: at, value });
-    at += steps;
-    left -= steps;
+    const fit = longestFit(table, at, left);
+    pieces.push({ step: at, ...fit });
+    at += fit.steps;
+    left -= fit.steps;
   }
 
   return pieces;
 }
 
-function restsFor(table: Duration[], step: number, length: number): NotationEvent[] {
-  return split(table, step, length).map((piece) => ({ kind: 'rest', ...piece }));
+function lengthOf(pieces: Piece[]): number {
+  return pieces.reduce((total, piece) => total + piece.steps, 0);
 }
 
-/** One sustained hit, as pieces tied together so they still read as a single stroke. */
-function notesFor(table: Duration[], step: number, length: number): NotationEvent[] {
-  const pieces = split(table, step, length);
+function restsFor(table: Duration[], step: number, length: number): NotationEvent[] {
+  return split(table, step, length).map(({ step: at, value }) => ({
+    kind: 'rest',
+    step: at,
+    value,
+  }));
+}
 
-  return pieces.map((piece, index) => ({
+/** The pieces of one stroke, tied so that together they still read as a single hit. */
+function notesFrom(pieces: Piece[]): NotationEvent[] {
+  return pieces.map(({ step, value }, index) => ({
     kind: 'note',
-    ...piece,
+    step,
+    value,
     tiedToNext: index < pieces.length - 1,
   }));
 }
 
-/** The steps of one bar that carry a hit, as indices relative to that bar. */
-function hitSteps(pattern: Pattern, bar: number, barLength: number): number[] {
-  const steps: number[] = [];
+interface Hit {
+  step: number;
+  /** A ringing voice was struck here, so the hit is held instead of cut short. */
+  rings: boolean;
+}
+
+/**
+ * How one hit is written, as the pieces it occupies.
+ *
+ * A ringing cymbal is held until the next hit, in tied pieces when no single value
+ * spells the span. Every other voice is struck: the longest value that fits the gap
+ * without outlasting its own beat, leaving the remainder to be filled with rests.
+ */
+function strokeFor(table: Duration[], hit: Hit, gap: number, beatSteps: number): Piece[] {
+  if (hit.rings) return split(table, hit.step, gap);
+
+  return [{ step: hit.step, ...longestFit(table, hit.step, Math.min(gap, beatSteps)) }];
+}
+
+/** The hits of one bar, at steps relative to that bar. */
+function hitsIn(pattern: Pattern, bar: number, barLength: number): Hit[] {
+  const hits: Hit[] = [];
 
   for (let step = 0; step < barLength; step += 1) {
-    if (hasHitAt(pattern, bar * barLength + step)) steps.push(step);
+    const at = bar * barLength + step;
+    if (hasHitAt(pattern, at)) {
+      hits.push({ step, rings: RINGING.some((voice) => isHit(pattern, voice, at)) });
+    }
   }
 
-  return steps;
+  return hits;
 }
 
 function measureFor(pattern: Pattern, bar: number, table: Duration[]): NotationMeasure {
+  const { stepsPerBeat } = pattern.dimensions;
   const barLength = stepsPerBar(pattern.dimensions);
-  const hits = hitSteps(pattern, bar, barLength);
+  const hits = hitsIn(pattern, bar, barLength);
 
-  // Every hit sounds until the next one, so the only silence a measure can hold is the
-  // stretch before its first hit — or, with no hits at all, the whole measure.
-  const [first = barLength] = hits;
-  const events: NotationEvent[] = restsFor(table, 0, first);
+  const events: NotationEvent[] = [];
+  let filled = 0;
 
-  for (const [index, step] of hits.entries()) {
+  for (const [index, hit] of hits.entries()) {
     // Notes stop at the bar line; a hit's tail never carries into the next measure.
-    const until = hits[index + 1] ?? barLength;
-    events.push(...notesFor(table, step, until - step));
+    const until = hits[index + 1]?.step ?? barLength;
+    const stroke = strokeFor(table, hit, until - hit.step, stepsPerBeat);
+
+    events.push(...restsFor(table, filled, hit.step - filled), ...notesFrom(stroke));
+    filled = hit.step + lengthOf(stroke);
   }
+
+  events.push(...restsFor(table, filled, barLength - filled));
 
   return { events };
 }

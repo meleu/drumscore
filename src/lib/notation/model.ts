@@ -15,8 +15,9 @@ export interface NotationNote {
   value: NoteValue;
   /**
    * True when this note is tied into the one that follows: the two are struck once and
-   * held. A duration no single note value can spell comes back as a run of notes with
-   * this set on every piece but the last.
+   * held. Only voices that ring on are written this way, and a span no single note
+   * value can spell comes back as a run of notes with this set on every piece but the
+   * last.
    */
   tiedToNext: boolean;
 }
