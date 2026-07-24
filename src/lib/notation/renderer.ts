@@ -1,5 +1,5 @@
 import { Formatter, Renderer, Stave, StaveNote, Voice } from 'vexflow';
-import type { NotationModel, NoteValue } from './model';
+import type { NotationEvent, NotationModel, NoteValue } from './model';
 
 /**
  * The thin adapter that draws a NotationModel with VexFlow's SVG backend. It holds no
@@ -23,12 +23,30 @@ const DURATION_CODES: Record<NoteValue, string> = {
  */
 const PLACEHOLDER_KEY = 'c/5';
 
+/**
+ * Rests sit in the middle of the staff, except the whole rest, which by convention
+ * hangs from the line above.
+ */
+const REST_KEYS: Partial<Record<NoteValue, string>> = { whole: 'd/5' };
+const DEFAULT_REST_KEY = 'b/4';
+
 const HEIGHT = 140;
 const STAVE_TOP = 24;
 const STAVE_LEFT = 10;
 /** The first measure also carries the clef and time signature, so it needs more room. */
 const FIRST_MEASURE_EXTRA_WIDTH = 60;
 const MIN_MEASURE_WIDTH = 180;
+
+/** VexFlow spells a rest as the note value's code with an `r` suffix. */
+function toStaveNote(event: NotationEvent): StaveNote {
+  const isRest = event.kind === 'rest';
+
+  return new StaveNote({
+    keys: [isRest ? (REST_KEYS[event.value] ?? DEFAULT_REST_KEY) : PLACEHOLDER_KEY],
+    duration: DURATION_CODES[event.value] + (isRest ? 'r' : ''),
+    clef: CLEF,
+  });
+}
 
 export function renderNotation(container: HTMLDivElement, model: NotationModel, width: number) {
   container.replaceChildren();
@@ -58,20 +76,9 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
     }
     stave.setContext(context).draw();
 
-    if (measure.notes.length > 0) {
-      const notes = measure.notes.map(
-        (note) =>
-          new StaveNote({
-            keys: [PLACEHOLDER_KEY],
-            duration: DURATION_CODES[note.value],
-            clef: CLEF,
-          }),
-      );
-
-      // SOFT mode: until the engine emits rests, a measure's notes rarely add up to a
-      // full bar, and a strict voice would refuse to format.
-      const voice = new Voice({ numBeats: beats, beatValue }).setMode(Voice.Mode.SOFT);
-      voice.addTickables(notes);
+    if (measure.events.length > 0) {
+      const voice = new Voice({ numBeats: beats, beatValue });
+      voice.addTickables(measure.events.map(toStaveNote));
 
       // formatToStave measures the room left after the clef and time signature, so the
       // first measure's notes stay clear of them.

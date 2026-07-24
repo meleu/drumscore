@@ -56,11 +56,11 @@ Grow the notation engine so consecutive empty steps are absorbed into the preced
 
 ### Acceptance criteria
 
-- [ ] Duration of each note = number of steps until the next hit (or bar/pattern end).
-- [ ] Steps before the first hit render as rest(s) of correct duration; a fully empty bar renders as full-bar rest(s).
-- [ ] Straight 8ths collapse to eighth notes (not 16th + 16th-rest); four-on-the-floor collapses to quarter notes.
-- [ ] Vitest table covers: empty bar, four-on-the-floor, straight-8ths, backbeat, a syncopated pattern — asserting durations and rests.
-- [ ] Staff visibly reflects the collapsed durations.
+- [x] Duration of each note = number of steps until the next hit (or bar/pattern end).
+- [x] Steps before the first hit render as rest(s) of correct duration; a fully empty bar renders as full-bar rest(s).
+- [x] Straight 8ths collapse to eighth notes (not 16th + 16th-rest); four-on-the-floor collapses to quarter notes.
+- [x] Vitest table covers: empty bar, four-on-the-floor, straight-8ths, backbeat, a syncopated pattern — asserting durations and rests.
+- [ ] Staff visibly reflects the collapsed durations. _(renderer draws rests and collapsed values; not yet confirmed on screen)_
 
 ---
 

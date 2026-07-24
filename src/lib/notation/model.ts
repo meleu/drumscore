@@ -9,13 +9,24 @@
 export type NoteValue = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth';
 
 export interface NotationNote {
+  kind: 'note';
   /** Where the note starts, as a step index within its own measure. */
   step: number;
   value: NoteValue;
 }
 
+export interface NotationRest {
+  kind: 'rest';
+  step: number;
+  value: NoteValue;
+}
+
+/** Notes and rests share a measure's timeline, so they live in one ordered list. */
+export type NotationEvent = NotationNote | NotationRest;
+
 export interface NotationMeasure {
-  notes: NotationNote[];
+  /** In step order, together filling the measure exactly. */
+  events: NotationEvent[];
 }
 
 export interface TimeSignature {
