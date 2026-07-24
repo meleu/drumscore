@@ -312,6 +312,64 @@ describe('noteheads', () => {
   });
 });
 
+describe('beaming', () => {
+  function beamsOf(pattern: Pattern, id: PartId, bar = 0): number[][] {
+    return partOf(measureOf(pattern, bar), id).beams.map((group) => group.steps);
+  }
+
+  it('beams a straight run of sixteenths one beam per beat', () => {
+    const pattern = patternWith({ closedHiHat: [0, 1, 2, 3, 4, 5, 6, 7] });
+
+    expect(beamsOf(pattern, 'hands')).toEqual([
+      [0, 1, 2, 3],
+      [4, 5, 6, 7],
+    ]);
+  });
+
+  it('beams straight eighths per beat, two to a beam', () => {
+    const pattern = patternWith({ closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14] });
+
+    expect(beamsOf(pattern, 'hands')).toEqual([
+      [0, 2],
+      [4, 6],
+      [8, 10],
+      [12, 14],
+    ]);
+  });
+
+  it('breaks a beam at a rest and starts a fresh one after the gap', () => {
+    const pattern = patternWith({ closedHiHat: [0, 1, 2, 6, 7] });
+
+    // 0,1 are sixteenths; 2 becomes an eighth reaching the beat line; then a rest to 6.
+    expect(beamsOf(pattern, 'hands')).toEqual([
+      [0, 1, 2],
+      [6, 7],
+    ]);
+  });
+
+  it('does not beam a lone flagged note', () => {
+    const pattern = patternWith({ snare: [2] });
+
+    expect(beamsOf(pattern, 'hands')).toEqual([]);
+  });
+
+  it('leaves unbeamable quarter notes alone', () => {
+    const pattern = patternWith({ kick: [0, 4, 8, 12] });
+
+    expect(beamsOf(pattern, 'feet')).toEqual([]);
+  });
+
+  it('does not join sixteenths across a beat line into one beam', () => {
+    const pattern = patternWith({ closedHiHat: [2, 3, 4, 5] });
+
+    // The beat falls between step 3 and step 4, so the run splits there.
+    expect(beamsOf(pattern, 'hands')).toEqual([
+      [2, 3],
+      [4, 5],
+    ]);
+  });
+});
+
 /** [4, 4, 8] -> [0, 4, 8]: where each event starts once the earlier ones are laid out. */
 function runningTotals(lengths: number[]): number[] {
   let total = 0;

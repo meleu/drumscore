@@ -27,115 +27,59 @@
 <text stroke="none" font-size="30pt" x="45" y="102"></text>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M87.25 67L87.25 35">
-</path>
-</g>
 <g class="vf-notehead">
 <text stroke="none" font-size="30pt" x="76" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="86.5" y="33"></text>
-</g>
-<rect x="76" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="76" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M138.375 67L138.375 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="127.125" y="67"></text>
+<text stroke="none" font-size="30pt" x="127.375" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="137.625" y="33"></text>
-</g>
-<rect x="127.125" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="127.375" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M189.5 67L189.5 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="178.25" y="67"></text>
+<text stroke="none" font-size="30pt" x="178.75" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="188.75" y="33"></text>
-</g>
-<rect x="178.25" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="178.75" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M240.625 67L240.625 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="229.375" y="67"></text>
+<text stroke="none" font-size="30pt" x="230.125" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="239.875" y="33"></text>
-</g>
-<rect x="229.375" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="230.125" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M291.75 67L291.75 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="280.5" y="67"></text>
+<text stroke="none" font-size="30pt" x="281.5" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="291" y="33"></text>
-</g>
-<rect x="280.5" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="281.5" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M342.875 67L342.875 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="331.625" y="67"></text>
+<text stroke="none" font-size="30pt" x="332.875" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="342.125" y="33"></text>
-</g>
-<rect x="331.625" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="332.875" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M394 67L394 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="382.75" y="67"></text>
+<text stroke="none" font-size="30pt" x="384.25" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="393.25" y="33"></text>
-</g>
-<rect x="382.75" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="384.25" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
-<g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M445.125 67L445.125 35">
-</path>
-</g>
 <g class="vf-notehead">
-<text stroke="none" font-size="30pt" x="433.875" y="67"></text>
+<text stroke="none" font-size="30pt" x="435.625" y="67"></text>
 </g>
-<g class="vf-flag">
-<text stroke="none" font-size="30pt" x="444.375" y="33"></text>
-</g>
-<rect x="433.875" y="32" width="21.5" height="40" opacity="0" pointer-events="auto">
+<rect x="435.625" y="33" width="12" height="39" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote">
@@ -144,6 +88,54 @@
 </g>
 <rect x="76" y="102" width="11" height="6" opacity="0" pointer-events="auto">
 </rect>
+</g>
+<g class="vf-beam">
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M87.25 67L87.25 32.75">
+</path>
+</g>
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M138.625 67L138.625 32.75">
+</path>
+</g>
+<path stroke="none" d="M86.5 32L86.5 37L138.875 37L138.875 32Z">
+</path>
+</g>
+<g class="vf-beam">
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M190 67L190 32.75">
+</path>
+</g>
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M241.375 67L241.375 32.75">
+</path>
+</g>
+<path stroke="none" d="M189.25 32L189.25 37L241.625 37L241.625 32Z">
+</path>
+</g>
+<g class="vf-beam">
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M292.75 67L292.75 32.75">
+</path>
+</g>
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M344.125 67L344.125 32.75">
+</path>
+</g>
+<path stroke="none" d="M292 32L292 37L344.375 37L344.375 32Z">
+</path>
+</g>
+<g class="vf-beam">
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M395.5 67L395.5 32.75">
+</path>
+</g>
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M446.875 67L446.875 32.75">
+</path>
+</g>
+<path stroke="none" d="M394.75 32L394.75 37L447.125 37L447.125 32Z">
+</path>
 </g>
 <g class="vf-stave">
 <path fill="none" d="M480 72.5L890 72.5">

@@ -55,11 +55,23 @@ export type PartId = 'hands' | 'feet';
 
 export type StemDirection = 'up' | 'down';
 
+/**
+ * A run of consecutive beamable notes to be drawn under one beam instead of with flags.
+ * Notes are named by their step within the measure — the same step the events carry — so
+ * a group is unambiguous without pointing into the events array by index.
+ */
+export interface BeamGroup {
+  /** Steps of the notes joined by this beam, in order. Always two or more. */
+  steps: number[];
+}
+
 export interface NotationPart {
   id: PartId;
   stemDirection: StemDirection;
   /** In step order, together filling the measure exactly. */
   events: NotationEvent[];
+  /** Which notes to beam together; per-beat runs of eighths/sixteenths. */
+  beams: BeamGroup[];
 }
 
 export interface NotationMeasure {

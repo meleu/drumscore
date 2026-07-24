@@ -1,4 +1,4 @@
-import { Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow';
+import { Beam, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow';
 import type {
   NotationEvent,
   NotationModel,
@@ -61,12 +61,27 @@ const STAVE_LEFT = 10;
 const FIRST_MEASURE_EXTRA_WIDTH = 60;
 const MIN_MEASURE_WIDTH = 180;
 
-function toVoice(part: NotationPart, beats: number, beatValue: number): Voice {
+interface DrawablePart {
+  voice: Voice;
+  beams: Beam[];
+}
+
+/**
+ * A part becomes a voice plus the beams over it. The beams are built from the same
+ * StaveNote objects the voice holds — creating a Beam suppresses those notes' flags — so
+ * they must be constructed here, then drawn after the voice, once the notes are placed.
+ */
+function toDrawablePart(part: NotationPart, beats: number, beatValue: number): DrawablePart {
   const notes = part.events.map((event) => toStaveNote(event, part.stemDirection));
   const voice = new Voice({ numBeats: beats, beatValue });
   voice.addTickables(notes);
 
-  return voice;
+  const byStep = new Map(part.events.map((event, index) => [event.step, notes[index]]));
+  const beams = part.beams.map(
+    (group) => new Beam(group.steps.map((step) => byStep.get(step) as StaveNote)),
+  );
+
+  return { voice, beams };
 }
 
 export function renderNotation(container: HTMLDivElement, model: NotationModel, width: number) {
@@ -97,9 +112,10 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
     }
     stave.setContext(context).draw();
 
-    const voices = measure.parts
+    const drawable = measure.parts
       .filter((part) => part.events.length > 0)
-      .map((part) => toVoice(part, beats, beatValue));
+      .map((part) => toDrawablePart(part, beats, beatValue));
+    const voices = drawable.map(({ voice }) => voice);
 
     if (voices.length > 0) {
       // formatToStave measures the room left after the clef and time signature, so the
@@ -108,6 +124,8 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
       new Formatter().joinVoices(voices).formatToStave(voices, stave);
 
       for (const voice of voices) voice.draw(context, stave);
+      // Beams draw after the notes are placed; each already suppressed its notes' flags.
+      for (const { beams } of drawable) for (const beam of beams) beam.setContext(context).draw();
     }
 
     x += measureWidth;

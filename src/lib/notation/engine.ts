@@ -1,5 +1,6 @@
 import { isHit, stepsPerBar, type GridDimensions, type Pattern, type VoiceId } from '$lib/pattern';
 import type {
+  BeamGroup,
   NotationEvent,
   NotationMeasure,
   NotationModel,
@@ -195,6 +196,44 @@ function hitsIn(pattern: Pattern, part: Part, bar: number, barLength: number): H
   return hits;
 }
 
+/** The note values worth beaming: everything shorter than a beat carries a flag. */
+const BEAMABLE: ReadonlySet<NoteValue> = new Set<NoteValue>(['eighth', 'sixteenth']);
+
+/**
+ * Group the flagged notes into beams the conventional way: one beam per beat.
+ *
+ * A run is broken by anything that cannot join it — a rest, an unflagged note, or the
+ * start of a new beat — so the beat stays visible through the beaming, just as it does
+ * through the note values. A lone flagged note keeps its flag; a beam needs at least two.
+ */
+function beamsFor(events: NotationEvent[], stepsPerBeat: number): BeamGroup[] {
+  const groups: BeamGroup[] = [];
+  let run: number[] = [];
+  let beat = -1;
+
+  const flush = () => {
+    if (run.length >= 2) groups.push({ steps: run });
+    run = [];
+  };
+
+  for (const event of events) {
+    if (event.kind !== 'note' || !BEAMABLE.has(event.value)) {
+      flush();
+      continue;
+    }
+
+    const eventBeat = Math.floor(event.step / stepsPerBeat);
+    if (eventBeat !== beat) {
+      flush();
+      beat = eventBeat;
+    }
+    run.push(event.step);
+  }
+  flush();
+
+  return groups;
+}
+
 function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): NotationPart {
   const { stepsPerBeat } = pattern.dimensions;
   const barLength = stepsPerBar(pattern.dimensions);
@@ -219,7 +258,12 @@ function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): 
 
   events.push(...restsFor(table, part, filled, barLength - filled));
 
-  return { id: part.id, stemDirection: part.stemDirection, events };
+  return {
+    id: part.id,
+    stemDirection: part.stemDirection,
+    events,
+    beams: beamsFor(events, stepsPerBeat),
+  };
 }
 
 export function toNotation(pattern: Pattern): NotationModel {

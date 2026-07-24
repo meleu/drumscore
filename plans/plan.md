@@ -62,17 +62,17 @@ the engine, model, and renderer.
 
 ---
 
-## Phase 5: Automatic beaming
+## Phase 5: Automatic beaming — **Done**
 
 **User stories**: 8
 
 Engine emits beam-group metadata over runs of beamable notes (conventional per-beat
 grouping); renderer draws beams instead of flags. Purely additive to `NotationModel`.
 
-- [ ] Engine emits beam groups over runs of beamable notes, per-beat grouping.
-- [ ] Rests and non-beamable values excluded from groups.
-- [ ] Renderer draws beams from the group metadata.
-- [ ] Vitest asserts beam grouping for a straight-16ths run and a mixed run with a gap.
+- [x] Engine emits beam groups over runs of beamable notes, per-beat grouping.
+- [x] Rests and non-beamable values excluded from groups.
+- [x] Renderer draws beams from the group metadata.
+- [x] Vitest asserts beam grouping for a straight-16ths run and a mixed run with a gap.
 
 ---
 
