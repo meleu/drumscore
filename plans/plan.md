@@ -103,17 +103,18 @@ Audio engine emits `currentStep`; Grid highlights the current column, cleared on
 
 ---
 
-## Phase 8: Seed default beat + Clear
+## Phase 8: Seed default beat + Clear — **Done**
 
 **User stories**: 15, 16
 
 Add pure `seed` (hi-hats on every 8th, kick on 1 & 3, snare on 2 & 4) and `clear` to
 the Pattern model, plus a Clear transport control. Fresh load with nothing saved/shared
-opens on the seed.
+opens on the seed. Seed layout is derived from grid dimensions (no hard-coded step
+numbers) and locked down by colocated Vitest cases.
 
-- [ ] Fresh load (no URL, no autosave) shows the seeded rock beat in grid and staff, playable immediately.
-- [ ] Clear empties the grid (staff shows full-bar rests).
-- [ ] `seed` and `clear` are pure Pattern-model ops.
+- [x] Fresh load (no URL, no autosave) shows the seeded rock beat in grid and staff, playable immediately.
+- [x] Clear empties the grid (staff shows full-bar rests).
+- [x] `seed` and `clear` are pure Pattern-model ops.
 
 ---
 

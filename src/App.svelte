@@ -4,9 +4,9 @@
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
   import { toNotation } from '$lib/notation/engine';
-  import { createPattern, setBpm, toggle, type VoiceId } from '$lib/pattern';
+  import { clear, seed, setBpm, toggle, type VoiceId } from '$lib/pattern';
 
-  const initialPattern = createPattern();
+  const initialPattern = seed();
   let pattern = $state(initialPattern);
   let playing = $state(false);
   // The column the audio engine is currently sounding; null when stopped.
@@ -39,6 +39,10 @@
   function handleBpm(bpm: number) {
     pattern = setBpm(pattern, bpm);
   }
+
+  function handleClear() {
+    pattern = clear(pattern);
+  }
 </script>
 
 <main>
@@ -48,7 +52,14 @@
   </header>
 
   <section aria-label="Transport controls">
-    <Transport {playing} bpm={pattern.bpm} onplay={play} onstop={stop} onbpm={handleBpm} />
+    <Transport
+      {playing}
+      bpm={pattern.bpm}
+      onplay={play}
+      onstop={stop}
+      onbpm={handleBpm}
+      onclear={handleClear}
+    />
   </section>
 
   <section aria-label="Pattern grid">

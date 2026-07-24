@@ -7,9 +7,10 @@
     onplay: () => void;
     onstop: () => void;
     onbpm: (bpm: number) => void;
+    onclear: () => void;
   }
 
-  let { playing, bpm, onplay, onstop, onbpm }: Props = $props();
+  let { playing, bpm, onplay, onstop, onbpm, onclear }: Props = $props();
 </script>
 
 <div class="transport">
@@ -35,6 +36,8 @@
     />
     BPM
   </label>
+
+  <button type="button" class="clear" onclick={() => onclear()}> Clear </button>
 </div>
 
 <style>
@@ -80,5 +83,19 @@
     border-radius: 4px;
     background: var(--color-surface);
     color: var(--color-text);
+  }
+
+  .clear {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .clear:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 </style>

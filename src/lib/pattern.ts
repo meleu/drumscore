@@ -104,3 +104,44 @@ export function toggle(pattern: Pattern, voice: VoiceId, step: number): Pattern 
 
   return { ...pattern, rows: { ...pattern.rows, [voice]: next } };
 }
+
+/** Empty every cell, preserving dimensions and tempo. */
+export function clear(pattern: Pattern): Pattern {
+  return createPattern(pattern.dimensions, pattern.bpm);
+}
+
+/**
+ * The default beat a fresh visitor lands on: a basic rock groove — closed hi-hat on
+ * every 8th, kick on beats 1 & 3, snare on beats 2 & 4 — laid out from the grid
+ * dimensions rather than hard-coded step numbers so it survives a resolution change.
+ */
+export function seed(
+  dimensions: GridDimensions = DEFAULT_DIMENSIONS,
+  bpm: number = DEFAULT_BPM,
+): Pattern {
+  const pattern = createPattern(dimensions, bpm);
+  const { stepsPerBeat, beatsPerBar, bars } = dimensions;
+  const rows = {
+    ...pattern.rows,
+    kick: [...pattern.rows.kick],
+    snare: [...pattern.rows.snare],
+    closedHiHat: [...pattern.rows.closedHiHat],
+  };
+
+  // A hi-hat every eighth note: one hit every half-beat's worth of steps.
+  const hiHatEvery = Math.max(1, Math.round(stepsPerBeat / 2));
+  for (let step = 0; step < rows.closedHiHat.length; step += hiHatEvery) {
+    rows.closedHiHat[step] = true;
+  }
+
+  for (let bar = 0; bar < bars; bar++) {
+    for (let beat = 0; beat < beatsPerBar; beat++) {
+      const step = (bar * beatsPerBar + beat) * stepsPerBeat;
+      // Beats 1 & 3 (even index) get the kick; beats 2 & 4 (odd index) get the snare.
+      if (beat % 2 === 0) rows.kick[step] = true;
+      else rows.snare[step] = true;
+    }
+  }
+
+  return { ...pattern, rows };
+}
