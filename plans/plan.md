@@ -33,12 +33,11 @@ Durable decisions that apply across all phases:
 
 ### What to build
 
-Stand up the Vite + TS + Svelte project with Vitest wired and the GitHub Actions → GitHub Pages deploy (`base: /drumscore/`). Build the thinnest end-to-end pipeline that touches every layer: the **Pattern model** (parameterized dimensions, `toggle`) as the single source of truth; a **Grid** component (6 × 32) whose cells toggle on click; a **trivial Notation engine** (`Pattern → NotationModel` where each hit is a standalone 16th note, one voice, one notehead style, no merging/rests/ties/beams); a **Notation renderer** drawing that model to a VexFlow SVG in a **Staff container**; and an **App shell** with a comfortable desktop layout. Toggling any cell updates the staff live. Deploy so the URL loads fast and static.
+Stand up the Vite + TS + Svelte project with Vitest wired. Build the thinnest end-to-end pipeline that touches every layer: the **Pattern model** (parameterized dimensions, `toggle`) as the single source of truth; a **Grid** component (6 × 32) whose cells toggle on click; a **trivial Notation engine** (`Pattern → NotationModel` where each hit is a standalone 16th note, one voice, one notehead style, no merging/rests/ties/beams); a **Notation renderer** drawing that model to a VexFlow SVG in a **Staff container**; and an **App shell** with a comfortable desktop layout. Toggling any cell updates the staff live. Deploy so the URL loads fast and static.
 
 ### Acceptance criteria
 
 - [ ] `npm run dev` serves the app; `npm run build` produces a static bundle with `base: /drumscore/`.
-- [ ] GitHub Actions workflow deploys to GitHub Pages on push to `main`.
 - [ ] Grid renders 6 rows × 32 columns; clicking a cell toggles it on/off with visible state.
 - [ ] Grid dimensions come from parameterized model config — no literal `16`/`32` in logic.
 - [ ] Toggling a cell re-renders the VexFlow SVG staff live (even if notation is crude 16ths).
