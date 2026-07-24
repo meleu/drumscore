@@ -83,6 +83,17 @@ export function isHit(pattern: Pattern, voice: VoiceId, step: number): boolean {
   return pattern.rows[voice][step] ?? false;
 }
 
+/**
+ * Set the tempo, clamped to the supported range. Non-finite input (e.g. a cleared
+ * number field) leaves the pattern untouched.
+ */
+export function setBpm(pattern: Pattern, bpm: number): Pattern {
+  if (!Number.isFinite(bpm)) return pattern;
+  const clamped = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)));
+  if (clamped === pattern.bpm) return pattern;
+  return { ...pattern, bpm: clamped };
+}
+
 /** Flip one cell. Out-of-range steps leave the pattern untouched. */
 export function toggle(pattern: Pattern, voice: VoiceId, step: number): Pattern {
   const row = pattern.rows[voice];

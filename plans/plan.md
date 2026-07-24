@@ -76,18 +76,19 @@ grouping); renderer draws beams instead of flags. Purely additive to `NotationMo
 
 ---
 
-## Phase 6: Audio playback (synth voices, play/stop, tempo, seamless loop)
+## Phase 6: Audio playback (synth voices, play/stop, tempo, seamless loop) — **Done**
 
 **User stories**: 9, 10, 11, 12, 14
 
 Audio engine wraps a Tone.js Transport loop from the Pattern: `MembraneSynth` kick,
-`NoiseSynth` snare/hi-hats, `MetalSynth` cymbals/ride; play/stop, BPM (default 100,
-40–240); seamless loop. Wire transport controls into the App shell.
+`NoiseSynth` snare/hi-hats (hats highpass-filtered), `MetalSynth` cymbals/ride; play/stop,
+BPM (default 100, 40–240); seamless loop via a looping `Sequence` whose callback reads the
+current pattern, so edits/tempo apply live. Transport controls wired into the App shell.
 
-- [ ] Play schedules on-cells as synth hits on the correct voices; Stop returns to editing.
-- [ ] BPM accepts 40–240, defaults to 100, changes speed live.
-- [ ] Loop repeats with no gap/click; simultaneous hits sound together.
-- [ ] Editing while stopped, then playing, reflects the current pattern.
+- [x] Play schedules on-cells as synth hits on the correct voices; Stop returns to editing.
+- [x] BPM accepts 40–240, defaults to 100, changes speed live.
+- [x] Loop repeats with no gap/click; simultaneous hits sound together.
+- [x] Editing while stopped, then playing, reflects the current pattern.
 
 ---
 
