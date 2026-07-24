@@ -1,6 +1,6 @@
 # Plan: drumscore
 
-> Source PRD: `plans/PRD.md` — grid-to-notation drum loop sketchpad (static site).
+> Source PRD: [PRD.md](./PRD.md) — grid-to-notation drum loop sketchpad (static site).
 > Durable stack, module boundaries, and notation conventions live in the PRD; this
 > file tracks the phased build.
 
@@ -183,12 +183,12 @@ bytes we ship and it no longer depends on VexFlow's host configuration.
 **Correction to the premise above:** the CDN fetch was real but redundant, and the
 bundle was already carrying the fonts. `import ... from 'vexflow'` pulls an entry
 point that inlines *six* fonts as base64 data URIs and registers them at import time —
-~790KB of the ~1.4MB `dist/`, four of them (Gonville, Petaluma, Petaluma Script,
+~790KB of the around 1.4MB `dist/`, four of them (Gonville, Petaluma, Petaluma Script,
 Academico Bold) never drawn here. So the app already rendered offline; what it did not
 do was render *small*, and `Staff`'s `loadFonts` preload then re-fetched Bravura and
 Academico from jsdelivr on top. The fix is to import `vexflow/core` (same library, no
 bundled fonts) everywhere and register only our two. Bundle JS therefore **shrank**
-1416KB → 634KB; with the 270KB of woff2 assets, `dist/` went ~1.4MB → ~912KB. The
+1416KB → 634KB; with the 270KB of woff2 assets, `dist/` went from around 1.4MB → ~912KB. The
 "+19%" projection in the size note below was wrong in sign — measured, this is −35%.
 
 - [x] The two configured fonts (Bravura, Academico) are vendored from the `@vexflow-fonts` packages and served from the app's own origin under `base: /drumscore/`.
