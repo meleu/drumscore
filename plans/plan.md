@@ -37,12 +37,12 @@ Stand up the Vite + TS + Svelte project with Vitest wired. Build the thinnest en
 
 ### Acceptance criteria
 
-- [ ] `npm run dev` serves the app; `npm run build` produces a static bundle with `base: /drumscore/`.
-- [ ] Grid renders 6 rows × 32 columns; clicking a cell toggles it on/off with visible state.
-- [ ] Grid dimensions come from parameterized model config — no literal `16`/`32` in logic.
-- [ ] Toggling a cell re-renders the VexFlow SVG staff live (even if notation is crude 16ths).
-- [ ] Notation engine has zero imports from VexFlow/Tone.js/DOM; a first Vitest test asserts its output for a simple pattern.
-- [ ] Layout is readable on a laptop/desktop screen.
+- [x] `npm run dev` serves the app; `npm run build` produces a static bundle with `base: /drumscore/`.
+- [x] Grid renders 6 rows × 32 columns; clicking a cell toggles it on/off with visible state.
+- [x] Grid dimensions come from parameterized model config — no literal `16`/`32` in logic.
+- [x] Toggling a cell re-renders the VexFlow SVG staff live (even if notation is crude 16ths).
+- [x] Notation engine has zero imports from VexFlow/Tone.js/DOM; a first Vitest test asserts its output for a simple pattern.
+- [x] Layout is readable on a laptop/desktop screen.
 
 ---
 
