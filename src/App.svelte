@@ -1,5 +1,6 @@
 <script lang="ts">
   import Grid from './components/Grid.svelte';
+  import RepoLink from './components/RepoLink.svelte';
   import Staff from './components/Staff.svelte';
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
@@ -72,8 +73,11 @@
 
 <main>
   <header>
-    <h1>drumscore</h1>
-    <p>Quickly sketch drum loops and see them in real musical notation.</p>
+    <div class="header-text">
+      <h1>drumscore</h1>
+      <p>Quickly sketch drum loops and see them in real musical notation.</p>
+    </div>
+    <RepoLink href="https://github.com/meleu/drumscore" />
   </header>
 
   <section aria-label="Transport controls">
@@ -108,6 +112,13 @@
     max-width: 72rem;
     margin: 0 auto;
     padding: 2.5rem 1.5rem 4rem;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
   }
 
   h1 {
