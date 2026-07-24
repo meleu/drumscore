@@ -73,7 +73,7 @@
 <main>
   <header>
     <h1>drumscore</h1>
-    <p>Sketch a drum loop on the grid and read it back as percussion notation.</p>
+    <p>Quickly sketch drum loops and see them in real musical notation.</p>
   </header>
 
   <section aria-label="Transport controls">

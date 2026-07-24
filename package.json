@@ -1,6 +1,6 @@
 {
   "name": "drumscore",
-  "description": "Sketch drum loops on a step grid and see them rendered as real percussion notation.",
+  "description": "Quickly sketch drum loops and see them in real musical notation.",
   "private": true,
   "version": "0.0.0",
   "type": "module",
