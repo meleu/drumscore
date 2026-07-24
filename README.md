@@ -16,3 +16,12 @@ actual music notation. The options I've found force a trade-off:
 
 When I have a pattern in my head, I want to both _hear_ it and
 _see it as an actual music sheet_.
+
+## Acknowledgements
+
+This project stands on the shoulders of these excellent open source projects:
+
+- [VexFlow](https://www.vexflow.com/) - renders the music notation
+  ([repo](https://github.com/vexflow/vexflow))
+- [Tone.js](https://tonejs.github.io/) - handles the audio playback
+  ([repo](https://github.com/Tonejs/Tone.js))
