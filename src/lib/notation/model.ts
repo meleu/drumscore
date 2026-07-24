@@ -33,6 +33,11 @@ export interface NotationNote {
   /** Where the note starts, as a step index within its own measure. */
   step: number;
   value: NoteValue;
+  /**
+   * Augmentation dots. 0 is a plain note; 1 lengthens the value by half, so a dotted
+   * eighth fills the three-sixteenth gap that a bare eighth leaves a rest hanging off.
+   */
+  dots: number;
   /** The drums struck together here, low to high. More than one is a chord. */
   noteheads: Notehead[];
 }

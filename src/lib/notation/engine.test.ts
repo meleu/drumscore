@@ -38,15 +38,17 @@ const CODES: Record<NoteValue, string> = {
 
 /**
  * Spell a measure out as a rhythm: `'rq q 8'` is a quarter rest, then a quarter note, then
- * an eighth — an `r` prefix marks a rest. Reading the events back this way keeps the
- * expectations below short enough to check against the bar you have in your head.
+ * an eighth — an `r` prefix marks a rest and a trailing `.` an augmentation dot, so `8.` is
+ * a dotted eighth. Reading the events back this way keeps the expectations below short
+ * enough to check against the bar you have in your head.
  */
 function rhythm(events: NotationEvent[]): string {
   return events
     .map((event, index) => {
       const separator = index === 0 ? '' : ' ';
+      const dots = event.kind === 'note' ? '.'.repeat(event.dots) : '';
 
-      return separator + (event.kind === 'rest' ? 'r' : '') + CODES[event.value];
+      return separator + (event.kind === 'rest' ? 'r' : '') + CODES[event.value] + dots;
     })
     .join('');
 }
@@ -126,10 +128,10 @@ describe('toNotation', () => {
       feet: ['rw', 'rw'],
     },
     {
-      name: 'syncopated hits keep their off-beat placement',
+      name: 'a hit three sixteenths before the next is a dotted eighth on the beat',
       hits: { kick: [0, 3, 6] },
       hands: ['rw', 'rw'],
-      feet: ['8 r16 16 r8 8 rh', 'rw'],
+      feet: ['8. 16 r8 8 rh', 'rw'],
     },
     {
       name: 'a struck hit never sounds past its own beat',
@@ -138,10 +140,10 @@ describe('toNotation', () => {
       feet: ['rq r8 8 r8 8 rq', 'rw'],
     },
     {
-      name: 'a struck span of three sixteenths is a note and a rest',
+      name: 'a struck span of three sixteenths on the beat is a dotted eighth',
       hits: { kick: [12, 15] },
       hands: ['rw', 'rw'],
-      feet: ['rh rq 8 r16 16', 'rw'],
+      feet: ['rh rq 8. 16', 'rw'],
     },
     {
       name: 'a struck span of five sixteenths is a note and a rest',
@@ -162,9 +164,9 @@ describe('toNotation', () => {
       feet: ['rw', 'rw'],
     },
     {
-      name: 'a struck open hi-hat span of three sixteenths is a note and a rest',
+      name: 'a struck open hi-hat span of three sixteenths on the beat is a dotted eighth',
       hits: { openHiHat: [12, 15] },
-      hands: ['rh rq 8 r16 16', 'rw'],
+      hands: ['rh rq 8. 16', 'rw'],
       feet: ['rw', 'rw'],
     },
     {
@@ -228,7 +230,12 @@ describe('toNotation', () => {
 
     for (const { parts } of toNotation(pattern).measures) {
       for (const { events } of parts) {
-        const lengths = events.map(({ value }) => STEPS[value]);
+        // A dot adds half again, so a dotted value covers 1.5x its plain step count.
+        const lengths = events.map((event) => {
+          const dots = event.kind === 'note' ? event.dots : 0;
+
+          return STEPS[event.value] * (2 - 2 ** -dots);
+        });
         const total = lengths.reduce((sum, steps) => sum + steps, 0);
 
         expect(total).toBe(barLength);
@@ -273,7 +280,7 @@ describe('parts', () => {
     expect(hands.events).toEqual([
       { kind: 'rest', step: 0, value: 'half', position: { step: 'b', octave: 4 } },
       { kind: 'rest', step: 8, value: 'quarter', position: { step: 'b', octave: 4 } },
-      { kind: 'note', step: 12, value: 'quarter', noteheads: [SNARE] },
+      { kind: 'note', step: 12, value: 'quarter', dots: 0, noteheads: [SNARE] },
     ]);
   });
 });

@@ -74,33 +74,56 @@ const VALUES_PER_WHOLE: readonly [NoteValue, number][] = [
 
 interface Duration {
   value: NoteValue;
+  /** Augmentation dots; 1 makes the value half again as long. */
+  dots: number;
   steps: number;
+  /** A value may begin only where the step is a multiple of this. */
+  align: number;
 }
 
 /**
- * The note values expressible at this resolution, longest first. Derived from the
- * dimensions rather than hardcoded, so a finer grid or a different beat value just
- * yields a different table.
+ * The plain (undotted) note values expressible at this resolution, longest first. Derived
+ * from the dimensions rather than hardcoded, so a finer grid or a different beat value
+ * just yields a different table. Each aligns to its own length, so a half note only
+ * begins on a half-note boundary, a quarter only on a beat, and so on.
  */
-function durations(dimensions: GridDimensions): Duration[] {
+function plainDurations(dimensions: GridDimensions): Duration[] {
   const stepsPerWhole = dimensions.stepsPerBeat * dimensions.beatValue;
 
   return VALUES_PER_WHOLE.map(([value, perWhole]) => ({
     value,
+    dots: 0,
     steps: stepsPerWhole / perWhole,
+    align: stepsPerWhole / perWhole,
   })).filter(({ steps }) => Number.isInteger(steps) && steps >= 1);
+}
+
+/**
+ * The plain values plus their dotted forms, longest first.
+ *
+ * A dot lengthens a value by half, so a dotted eighth spans three sixteenths — exactly the
+ * gap that a bare eighth leaves a rest dangling off. A dotted value aligns to twice its
+ * plain length, one binary level coarser: a dotted eighth begins only on a beat, so its
+ * borrowed sixteenth falls inside that beat rather than reaching across the next one.
+ */
+function noteDurations(dimensions: GridDimensions): Duration[] {
+  const plain = plainDurations(dimensions);
+  const dotted = plain
+    .map(({ value, steps }) => ({ value, dots: 1, steps: steps * 1.5, align: steps * 2 }))
+    .filter(({ steps }) => Number.isInteger(steps));
+
+  return [...plain, ...dotted].sort((a, b) => b.steps - a.steps);
 }
 
 /**
  * The longest duration that fits in `length` and may legally begin on `step`.
  *
- * The alignment test is what keeps the rhythm readable: a half note only starts on a
- * half-note boundary, a quarter only on a beat, and so on, so nothing straddles a
- * subdivision it has no business crossing. The one-step value always qualifies, so
- * there is always an answer.
+ * The alignment test is what keeps the rhythm readable: nothing straddles a subdivision it
+ * has no business crossing. The one-step value always qualifies, so there is always an
+ * answer.
  */
 function longestFit(table: Duration[], step: number, length: number): Duration {
-  const fit = table.find((duration) => duration.steps <= length && step % duration.steps === 0);
+  const fit = table.find((duration) => duration.steps <= length && step % duration.align === 0);
 
   /* v8 ignore next -- unreachable: the one-step value fits any step and any length >= 1 */
   if (!fit) throw new Error(`no note value fits ${length} step(s) at step ${step}`);
@@ -234,7 +257,14 @@ function beamsFor(events: NotationEvent[], stepsPerBeat: number): BeamGroup[] {
   return groups;
 }
 
-function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): NotationPart {
+interface Tables {
+  /** Rests stay undotted, so a silence reads as the plain values it sums to. */
+  rest: Duration[];
+  /** Notes may take a dot, so a struck span reads as one head, not a note and a rest. */
+  note: Duration[];
+}
+
+function partFor(pattern: Pattern, part: Part, bar: number, tables: Tables): NotationPart {
   const { stepsPerBeat } = pattern.dimensions;
   const barLength = stepsPerBar(pattern.dimensions);
   const hits = hitsIn(pattern, part, bar, barLength);
@@ -245,18 +275,19 @@ function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): 
   for (const [index, hit] of hits.entries()) {
     // Notes stop at the bar line; a hit's tail never carries into the next measure.
     const until = hits[index + 1]?.step ?? barLength;
-    const stroke = strokeFor(table, hit, until - hit.step, stepsPerBeat);
+    const stroke = strokeFor(tables.note, hit, until - hit.step, stepsPerBeat);
 
-    events.push(...restsFor(table, part, filled, hit.step - filled), {
+    events.push(...restsFor(tables.rest, part, filled, hit.step - filled), {
       kind: 'note',
       step: hit.step,
       value: stroke.value,
+      dots: stroke.dots,
       noteheads: hit.noteheads,
     });
     filled = hit.step + stroke.steps;
   }
 
-  events.push(...restsFor(table, part, filled, barLength - filled));
+  events.push(...restsFor(tables.rest, part, filled, barLength - filled));
 
   return {
     id: part.id,
@@ -268,12 +299,12 @@ function partFor(pattern: Pattern, part: Part, bar: number, table: Duration[]): 
 
 export function toNotation(pattern: Pattern): NotationModel {
   const { dimensions } = pattern;
-  const table = durations(dimensions);
+  const tables: Tables = { rest: plainDurations(dimensions), note: noteDurations(dimensions) };
 
   return {
     timeSignature: { beats: dimensions.beatsPerBar, beatValue: dimensions.beatValue },
     measures: Array.from({ length: dimensions.bars }, (_, bar): NotationMeasure => ({
-      parts: PARTS.map((part) => partFor(pattern, part, bar, table)),
+      parts: PARTS.map((part) => partFor(pattern, part, bar, tables)),
     })),
   };
 }

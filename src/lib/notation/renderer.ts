@@ -1,4 +1,4 @@
-import { Beam, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow';
+import { Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow';
 import type {
   NotationEvent,
   NotationModel,
@@ -45,13 +45,19 @@ function keyOf({ style, position }: Notehead): string {
 /** VexFlow spells a rest as the note value's code with an `r` suffix. */
 function toStaveNote(event: NotationEvent, stemDirection: StemDirection): StaveNote {
   const isRest = event.kind === 'rest';
+  // The count feeds the tick math; the glyph is a separate modifier that must be attached.
+  const dots = isRest ? 0 : event.dots;
 
-  return new StaveNote({
+  const note = new StaveNote({
     keys: isRest ? [keyFor(event.position)] : event.noteheads.map(keyOf),
     duration: DURATION_CODES[event.value] + (isRest ? 'r' : ''),
+    dots,
     stemDirection: STEM_DIRECTIONS[stemDirection],
     clef: CLEF,
   });
+  if (dots > 0) Dot.buildAndAttach([note], { all: true });
+
+  return note;
 }
 
 const HEIGHT = 160;
