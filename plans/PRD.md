@@ -160,8 +160,17 @@ modules are the test targets because they carry all the risk and need no browser
   `decode(encode(p)) === p` across representative patterns (empty, full, seeded,
   varied BPM), plus tolerance of malformed/absent input (falls back cleanly).
 
-Not unit-tested in v1 (visual/timing/DOM, low return for a solo static app): notation
-renderer, audio engine, export, persistence wiring, and Svelte UI components.
+The **notation renderer** is covered differently, because its output is SVG *markup*
+rather than pixels. A separate `verify:visual` check renders a set of fixture patterns
+in a real pinned browser and compares the emitted SVG against committed baseline files,
+so a stray tie or a mangled rest shows up as a reviewable diff. A real browser is
+required, not a DOM shim: VexFlow measures every glyph through `canvas.measureText`
+against the Bravura font, so under jsdom or happy-dom every glyph measures zero wide and
+the whole staff collapses onto the clef. The check is deliberately kept out of
+`pnpm run verify` — it needs a browser download and is far slower than the pure tests.
+
+Still not unit-tested in v1 (timing/DOM, low return for a solo static app): audio engine,
+export, persistence wiring, and Svelte UI components.
 
 Prior art: none — this is a greenfield repo. The Vitest + Vite integration is the
 conventional setup; tests colocate with the pure modules.

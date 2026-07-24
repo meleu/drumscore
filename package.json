@@ -22,7 +22,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "pnpm run format:check && pnpm run lint && pnpm run check && pnpm run test"
+    "verify": "pnpm run format:check && pnpm run lint && pnpm run check && pnpm run test",
+    "verify:visual": "node visual/snapshot.ts",
+    "verify:visual:update": "node visual/snapshot.ts --update"
   },
   "dependencies": {
     "tone": "^15.1.22",
@@ -39,6 +41,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.22.0",
     "globals": "^17.7.0",
+    "playwright": "1.61.1",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte": "^5.56.7",

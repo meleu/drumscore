@@ -1,0 +1,112 @@
+<svg pointer-events="none" stroke-width="1" stroke-dasharray="none" fill="black" stroke="black" shadowColor="black" font-family="Bravura,Academico" font-size="10pt" font-weight="normal" font-style="normal" width="900" height="140" viewBox="0 0 900 140" style="width: 900px; height: 140px;">
+<g class="vf-stave">
+<path fill="none" d="M10 64.5L480 64.5">
+</path>
+<path fill="none" d="M10 74.5L480 74.5">
+</path>
+<path fill="none" d="M10 84.5L480 84.5">
+</path>
+<path fill="none" d="M10 94.5L480 94.5">
+</path>
+<path fill="none" d="M10 104.5L480 104.5">
+</path>
+</g>
+<g class="vf-stavebarline">
+<rect x="10" y="64" width="1" height="41" stroke="none">
+</rect>
+</g>
+<g class="vf-stavebarline">
+<rect x="480" y="64" width="1" height="41" stroke="none">
+</rect>
+</g>
+<g class="vf-clef">
+<text stroke="none" font-size="30pt" x="15" y="84"></text>
+</g>
+<g class="vf-timesignature">
+<text stroke="none" font-size="30pt" x="45" y="74"></text>
+<text stroke="none" font-size="30pt" x="45" y="94"></text>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="76" y="84"></text>
+</g>
+<rect x="76" y="69" width="11" height="30" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="152.206" y="84"></text>
+</g>
+<rect x="152.206" y="76" width="10" height="18" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M220.603 79L220.603 47">
+</path>
+</g>
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="209.353" y="79"></text>
+</g>
+<g class="vf-flag">
+<text stroke="none" font-size="30pt" x="219.853" y="45"></text>
+</g>
+<rect x="209.353" y="44" width="21.5" height="41" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="266.5" y="84"></text>
+</g>
+<rect x="266.5" y="76" width="10" height="18" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-stem">
+<path stroke-width="1.5" fill="none" d="M334.897 79L334.897 47">
+</path>
+</g>
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="323.647" y="79"></text>
+</g>
+<g class="vf-flag">
+<text stroke="none" font-size="30pt" x="334.147" y="45"></text>
+</g>
+<rect x="323.647" y="44" width="21.5" height="41" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="380.794" y="84"></text>
+</g>
+<rect x="380.794" y="69" width="11" height="30" opacity="0" pointer-events="auto">
+</rect>
+</g>
+<g class="vf-stave">
+<path fill="none" d="M480 64.5L890 64.5">
+</path>
+<path fill="none" d="M480 74.5L890 74.5">
+</path>
+<path fill="none" d="M480 84.5L890 84.5">
+</path>
+<path fill="none" d="M480 94.5L890 94.5">
+</path>
+<path fill="none" d="M480 104.5L890 104.5">
+</path>
+</g>
+<g class="vf-stavebarline">
+<rect x="480" y="64" width="1" height="41" stroke="none">
+</rect>
+</g>
+<g class="vf-stavebarline">
+<rect x="890" y="64" width="1" height="41" stroke="none">
+</rect>
+</g>
+<g class="vf-stavenote">
+<g class="vf-notehead">
+<text stroke="none" font-size="30pt" x="497" y="74"></text>
+</g>
+<rect x="497" y="74" width="11" height="6" opacity="0" pointer-events="auto">
+</rect>
+</g>
+</svg>
