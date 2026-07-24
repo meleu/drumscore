@@ -12,6 +12,7 @@
 import {
   Filter,
   getDestination,
+  getDraw,
   getTransport,
   MembraneSynth,
   MetalSynth,
@@ -20,6 +21,9 @@ import {
   start,
 } from 'tone';
 import { isHit, totalSteps, VOICE_IDS, type Pattern, type VoiceId } from './pattern';
+
+/** Notified of the playing column as the loop advances; `null` when playback stops. */
+export type StepListener = (step: number | null) => void;
 
 /** One trigger fn per voice, plus a disposer for every Tone node it created. */
 interface VoiceKit {
@@ -99,11 +103,18 @@ export class AudioEngine {
   private readonly voices: VoiceKit;
   private sequence: Sequence<number> | null = null;
   private stepCount = 0;
+  private stepListener: StepListener | null = null;
+  private running = false;
 
   constructor(pattern: Pattern) {
     this.pattern = pattern;
     this.voices = buildVoices();
     getTransport().bpm.value = pattern.bpm;
+  }
+
+  /** Register (or clear, with `null`) the playhead listener for the playing column. */
+  onStep(listener: StepListener | null): void {
+    this.stepListener = listener;
   }
 
   /**
@@ -123,12 +134,17 @@ export class AudioEngine {
   async play(): Promise<void> {
     await start();
     if (!this.sequence) this.buildSequence();
+    this.running = true;
     getTransport().start();
   }
 
   /** Stop and rewind so the next play starts at the top of the loop. */
   stop(): void {
+    // Clear first: a draw queued just before the stop can still fire on the next
+    // animation frame, so the running guard below must already be down when it does.
+    this.running = false;
     getTransport().stop();
+    this.stepListener?.(null);
   }
 
   dispose(): void {
@@ -149,6 +165,11 @@ export class AudioEngine {
         for (const id of VOICE_IDS) {
           if (isHit(this.pattern, id, step)) this.voices.triggers[id](time);
         }
+        // The sequence callback fires ahead of the audible moment; Draw defers the
+        // highlight to that moment so the playhead lands in sync with the sound. The
+        // running guard drops draws that come due after a stop has cleared the highlight.
+        const listener = this.stepListener;
+        if (listener) getDraw().schedule(() => this.running && listener(step), time);
       },
       steps,
       subdivision,

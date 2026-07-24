@@ -9,10 +9,13 @@
   const initialPattern = createPattern();
   let pattern = $state(initialPattern);
   let playing = $state(false);
+  // The column the audio engine is currently sounding; null when stopped.
+  let currentStep = $state<number | null>(null);
   const notation = $derived(toNotation(pattern));
 
   // Seeded from the initial value; the effects below keep it in sync from here on.
   const engine = new AudioEngine(initialPattern);
+  engine.onStep((step) => (currentStep = step));
 
   // Keep the engine in step with the pattern (cells and tempo) while it plays.
   $effect(() => engine.setPattern(pattern));
@@ -49,7 +52,7 @@
   </section>
 
   <section aria-label="Pattern grid">
-    <Grid {pattern} ontoggle={handleToggle} />
+    <Grid {pattern} {currentStep} ontoggle={handleToggle} />
   </section>
 
   <section aria-label="Notation">

@@ -92,14 +92,14 @@ current pattern, so edits/tempo apply live. Transport controls wired into the Ap
 
 ---
 
-## Phase 7: Grid playhead during playback
+## Phase 7: Grid playhead during playback — **Done**
 
 **User stories**: 13
 
 Audio engine emits `currentStep`; Grid highlights the current column, cleared on stop.
 
-- [ ] Currently-playing column is visibly highlighted, advancing in time.
-- [ ] Highlight tracks tempo changes; stopping clears it.
+- [x] Currently-playing column is visibly highlighted, advancing in time.
+- [x] Highlight tracks tempo changes; stopping clears it.
 
 ---
 

@@ -3,10 +3,12 @@
 
   interface Props {
     pattern: Pattern;
+    /** Column highlighted by the playhead during playback; null when stopped. */
+    currentStep?: number | null;
     ontoggle: (voice: VoiceId, step: number) => void;
   }
 
-  let { pattern, ontoggle }: Props = $props();
+  let { pattern, currentStep = null, ontoggle }: Props = $props();
 
   // The model's canonical order runs low-to-high (kick first); a drummer reads a grid
   // the other way up, with the cymbals on top and the kick at the bottom.
@@ -26,7 +28,9 @@
 <div class="grid" style="--step-count: {steps.length}">
   <div class="corner"></div>
   {#each steps as step (step)}
-    <div class="count" class:bar={step % barLength === 0}>{beatLabel(step)}</div>
+    <div class="count" class:bar={step % barLength === 0} class:playing={step === currentStep}>
+      {beatLabel(step)}
+    </div>
   {/each}
 
   {#each rows as voice (voice.id)}
@@ -39,6 +43,7 @@
         class:on
         class:beat={step % stepsPerBeat === 0}
         class:bar={step % barLength === 0}
+        class:playing={step === currentStep}
         aria-pressed={on}
         aria-label="{voice.label}, step {step + 1}"
         onclick={() => ontoggle(voice.id, step)}
@@ -96,6 +101,20 @@
   .cell.on {
     border-color: var(--color-accent);
     background: var(--color-accent);
+  }
+
+  /* The playhead: a soft wash over the whole column, on cells and its count label. */
+  .cell.playing {
+    background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface));
+  }
+
+  .cell.on.playing {
+    background: color-mix(in srgb, var(--color-accent) 78%, white);
+  }
+
+  .count.playing {
+    color: var(--color-accent);
+    font-weight: 700;
   }
 
   .cell:focus-visible {
