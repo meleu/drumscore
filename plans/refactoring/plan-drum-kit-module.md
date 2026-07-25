@@ -129,11 +129,18 @@ highlighting, the toggle callback, the aria labels.
 
 ### Acceptance criteria
 
-- [ ] The grid imports the Kit for labels and row order and no longer reverses anything.
-- [ ] The rendered grid shows the same six rows, in the same order, with the same labels
+- [x] The grid imports the Kit for labels and row order and no longer reverses anything.
+- [x] The rendered grid shows the same six rows, in the same order, with the same labels
       and the same aria labels as before this phase.
-- [ ] The Seed opens exactly as it does today.
-- [ ] `pnpm verify` passes.
+- [x] The Seed opens exactly as it does today.
+- [x] `pnpm verify` passes.
+
+The grid now iterates `DISPLAY_ORDER` directly. `rows` was a `$derived` over a constant
+list, so nothing reactive was lost by dropping it, and the comment explaining why the order
+is upside down went with it — that rule is stated on `DISPLAY_ORDER`, where the order is
+now decided. The equality with the old rendering is carried by `kit.test.ts`, which pins
+display order as canonical order reversed — exactly the expression the grid used to hold —
+and by `pnpm verify:visual`, still clean at 13 fixtures.
 
 ---
 
