@@ -4,15 +4,12 @@
 
   interface Props {
     model: NotationModel;
-    // The live `<svg>` VexFlow drew, exposed so the app can export it. Null until the
-    // first successful draw.
-    svg?: SVGSVGElement | null;
+    // Reports the live `<svg>` VexFlow drew, or null when there is nothing drawn. Called
+    // on every draw, so whoever listens always holds what is currently on screen.
+    ondrawn: (svg: SVGSVGElement | null) => void;
   }
 
-  // `svg` is written outward for the parent to bind and never read here, so
-  // no-useless-assignment can't see that its default and updates matter.
-  // eslint-disable-next-line no-useless-assignment
-  let { model, svg = $bindable(null) }: Props = $props();
+  let { model, ondrawn }: Props = $props();
 
   let width = $state(0);
   let failed = $state(false);
@@ -23,7 +20,7 @@
   // flight marks that one stale and its result is dropped rather than mounted.
   const draw = (node: HTMLDivElement) => {
     if (width === 0) {
-      svg = null;
+      ondrawn(null);
 
       return;
     }
@@ -33,14 +30,14 @@
       (drawn) => {
         if (stale) return;
         node.replaceChildren(...(drawn ? [drawn] : []));
-        svg = drawn;
+        ondrawn(drawn);
         failed = false;
       },
       (error: unknown) => {
         if (stale) return;
         // Nothing to draw, but the grid, playback and sharing are all unaffected.
         console.error(error);
-        svg = null;
+        ondrawn(null);
         failed = true;
       },
     );

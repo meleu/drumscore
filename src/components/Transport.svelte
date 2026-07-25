@@ -1,5 +1,6 @@
 <script lang="ts">
   import { MAX_BPM, MIN_BPM } from '$lib/pattern';
+  import type { Sheet } from '$lib/sheet/sheet.svelte';
 
   interface Props {
     playing: boolean;
@@ -9,26 +10,12 @@
     onbpm: (bpm: number) => void;
     onclear: () => void;
     oncopylink: () => Promise<boolean>;
-    oncopypng: () => Promise<boolean>;
-    onexportsvg: () => void;
-    onexportpng: () => void;
-    // False before the staff's first draw, when there is nothing to export yet.
-    canexport: boolean;
+    // What can be taken away from the staff. Not ready before its first draw, when
+    // there is nothing to export yet.
+    sheet: Sheet;
   }
 
-  let {
-    playing,
-    bpm,
-    onplay,
-    onstop,
-    onbpm,
-    onclear,
-    oncopylink,
-    oncopypng,
-    onexportsvg,
-    onexportpng,
-    canexport,
-  }: Props = $props();
+  let { playing, bpm, onplay, onstop, onbpm, onclear, oncopylink, sheet }: Props = $props();
 
   // Which copy button is currently showing its transient confirmation, if any. Only one
   // at a time, so a second copy replaces the first rather than leaving both lit.
@@ -77,17 +64,17 @@
   <button
     type="button"
     class="copy"
-    onclick={() => handleCopy('png', oncopypng)}
-    disabled={!canexport}
+    onclick={() => handleCopy('png', sheet.copy)}
+    disabled={!sheet.ready}
   >
     {copied === 'png' ? 'Copied!' : 'Copy PNG'}
   </button>
 
-  <button type="button" class="export" onclick={() => onexportsvg()} disabled={!canexport}>
+  <button type="button" class="export" onclick={() => sheet.saveSvg()} disabled={!sheet.ready}>
     Export SVG
   </button>
 
-  <button type="button" class="export" onclick={() => onexportpng()} disabled={!canexport}>
+  <button type="button" class="export" onclick={() => sheet.savePng()} disabled={!sheet.ready}>
     Export PNG
   </button>
 </div>

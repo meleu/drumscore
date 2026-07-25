@@ -4,9 +4,9 @@
   import Staff from './components/Staff.svelte';
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
-  import { copyPng, exportPng, exportSvg } from '$lib/sheet/export';
   import { toNotation } from '$lib/notation/engine';
   import { patternStore } from '$lib/persistence';
+  import { createSheet } from '$lib/sheet/sheet.svelte';
   import { createSketchpad } from '$lib/sketchpad.svelte';
 
   // Every state transition lives behind this seam — the app below only draws what the
@@ -18,8 +18,11 @@
   });
   $effect(() => () => sketchpad.dispose());
 
-  // The live notation SVG, bound from the Staff, that the export controls act on.
-  let staffSvg = $state<SVGSVGElement | null>(null);
+  // Everything you can take away from the staff lives behind this seam, which holds the
+  // drawn `<svg>` so no component here has to. The name is what an exported file is
+  // named after; '' until a pattern carries one, which the sheet reads as unnamed.
+  const sheet = createSheet({ name: () => '' });
+
   const notation = $derived(toNotation(sketchpad.pattern));
 
   async function copyLink(): Promise<boolean> {
@@ -29,18 +32,6 @@
     } catch {
       return false;
     }
-  }
-
-  function handleCopyPng(): Promise<boolean> {
-    return staffSvg ? copyPng(staffSvg) : Promise.resolve(false);
-  }
-
-  function handleExportSvg() {
-    if (staffSvg) void exportSvg(staffSvg);
-  }
-
-  function handleExportPng() {
-    if (staffSvg) void exportPng(staffSvg);
   }
 </script>
 
@@ -62,10 +53,7 @@
       onbpm={sketchpad.setBpm}
       onclear={sketchpad.clear}
       oncopylink={copyLink}
-      oncopypng={handleCopyPng}
-      onexportsvg={handleExportSvg}
-      onexportpng={handleExportPng}
-      canexport={staffSvg !== null}
+      {sheet}
     />
   </section>
 
@@ -78,7 +66,7 @@
   </section>
 
   <section aria-label="Notation">
-    <Staff model={notation} bind:svg={staffSvg} />
+    <Staff model={notation} ondrawn={sheet.drawn} />
   </section>
 </main>
 
