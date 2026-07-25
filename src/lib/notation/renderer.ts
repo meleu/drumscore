@@ -8,6 +8,7 @@ import type {
   NotationModel,
   NotationPart,
   Notehead,
+  NoteheadStyle,
   NoteValue,
   StaffPosition,
   StemDirection,
@@ -42,8 +43,19 @@ function keyFor(position: StaffPosition, glyph = ''): string {
   return `${position.step}/${position.octave}${glyph}`;
 }
 
+/**
+ * A record rather than a conditional, so the compiler is what catches a missing entry. A
+ * style VexFlow does not know is drawn as an ordinary notehead without complaint — at
+ * build time, at draw time and on screen — so widening `NoteheadStyle` has to fail here,
+ * in the one place that knows what the glyph should be.
+ */
+const NOTEHEAD_GLYPHS: Record<NoteheadStyle, string> = {
+  normal: '',
+  cross: '/x',
+};
+
 function keyOf({ style, position }: Notehead): string {
-  return keyFor(position, style === 'cross' ? '/x' : '');
+  return keyFor(position, NOTEHEAD_GLYPHS[style]);
 }
 
 /** VexFlow spells a rest as the note value's code with an `r` suffix. */
