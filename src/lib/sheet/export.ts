@@ -1,7 +1,7 @@
 /**
  * Export: turn the rendered notation SVG into downloadable files, or a PNG on the
  * clipboard. A thin, browser-only adapter — it carries no musical logic and reads the
- * pixels straight off the live `<svg>` the {@link ../components/Staff.svelte Staff}
+ * pixels straight off the live `<svg>` the {@link ../../components/Staff.svelte Staff}
  * drew, so every output reflects exactly what is on screen.
  *
  * The SVG VexFlow emits draws its glyphs as `<text>` in the Bravura/Academico music
@@ -12,7 +12,7 @@
  * `@font-face` block, making each export self-contained.
  */
 
-import { NOTATION_FONTS } from './notation/fonts';
+import { NOTATION_FONTS } from '../notation/fonts';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 

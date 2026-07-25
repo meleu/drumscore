@@ -4,7 +4,7 @@
   import Staff from './components/Staff.svelte';
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
-  import { copyPng, exportPng, exportSvg } from '$lib/export';
+  import { copyPng, exportPng, exportSvg } from '$lib/sheet/export';
   import { toNotation } from '$lib/notation/engine';
   import { patternStore } from '$lib/persistence';
   import { createSketchpad } from '$lib/sketchpad.svelte';

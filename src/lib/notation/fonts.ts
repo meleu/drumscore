@@ -11,7 +11,7 @@
  * version alongside the bytes) and Vite emits them as ordinary hashed assets.
  *
  * Font handling stops here, at the {@link ./renderer.ts renderer} that waits on these
- * fonts before it draws, and at the {@link ../export.ts exporter} that inlines them into
+ * fonts before it draws, and at the {@link ../sheet/export.ts exporter} that inlines them into
  * a saved file: the engine and the rest of the pure modules know nothing about it.
  */
 
