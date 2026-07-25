@@ -9,6 +9,7 @@
     onbpm: (bpm: number) => void;
     onclear: () => void;
     oncopylink: () => Promise<boolean>;
+    oncopypng: () => Promise<boolean>;
     onexportsvg: () => void;
     onexportpng: () => void;
     // False before the staff's first draw, when there is nothing to export yet.
@@ -23,21 +24,23 @@
     onbpm,
     onclear,
     oncopylink,
+    oncopypng,
     onexportsvg,
     onexportpng,
     canexport,
   }: Props = $props();
 
-  // Transient confirmation shown on the Copy link button after a successful copy.
-  let copied = $state(false);
+  // Which copy button is currently showing its transient confirmation, if any. Only one
+  // at a time, so a second copy replaces the first rather than leaving both lit.
+  let copied = $state<'link' | 'png' | null>(null);
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
-  async function handleCopyLink() {
-    const ok = await oncopylink();
+  async function handleCopy(what: 'link' | 'png', copy: () => Promise<boolean>) {
+    const ok = await copy();
     if (!ok) return;
-    copied = true;
+    copied = what;
     clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(() => (copied = false), 1500);
+    copiedTimer = setTimeout(() => (copied = null), 1500);
   }
 </script>
 
@@ -67,8 +70,17 @@
 
   <button type="button" class="clear" onclick={() => onclear()}> Clear </button>
 
-  <button type="button" class="copy" onclick={handleCopyLink}>
-    {copied ? 'Copied!' : 'Copy link'}
+  <button type="button" class="copy" onclick={() => handleCopy('link', oncopylink)}>
+    {copied === 'link' ? 'Copied!' : 'Copy link'}
+  </button>
+
+  <button
+    type="button"
+    class="copy"
+    onclick={() => handleCopy('png', oncopypng)}
+    disabled={!canexport}
+  >
+    {copied === 'png' ? 'Copied!' : 'Copy PNG'}
   </button>
 
   <button type="button" class="export" onclick={() => onexportsvg()} disabled={!canexport}>
@@ -136,6 +148,7 @@
     cursor: pointer;
   }
 
+  .copy:disabled,
   .export:disabled {
     cursor: not-allowed;
     opacity: 0.5;

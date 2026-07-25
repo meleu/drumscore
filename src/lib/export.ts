@@ -1,8 +1,8 @@
 /**
- * Export: turn the rendered notation SVG into downloadable files. A thin,
- * browser-only adapter — it carries no musical logic and reads the pixels straight
- * off the live `<svg>` the {@link ../components/Staff.svelte Staff} drew, so both
- * outputs reflect exactly what is on screen.
+ * Export: turn the rendered notation SVG into downloadable files, or a PNG on the
+ * clipboard. A thin, browser-only adapter — it carries no musical logic and reads the
+ * pixels straight off the live `<svg>` the {@link ../components/Staff.svelte Staff}
+ * drew, so every output reflects exactly what is on screen.
  *
  * The SVG VexFlow emits draws its glyphs as `<text>` in the Bravura/Academico music
  * fonts, referenced only by family name. That renders in-page because the app has
@@ -34,15 +34,42 @@ export async function exportSvg(svg: SVGSVGElement, filename = 'drumscore.svg'):
   downloadBlob(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }), filename);
 }
 
-/**
- * Save the current notation as a raster PNG. The SVG is drawn onto a canvas scaled up
- * (default 2×) so the image stays sharp, over a white background matching the paper.
- */
+/** Save the current notation as a raster PNG. */
 export async function exportPng(
   svg: SVGSVGElement,
   filename = 'drumscore.png',
   scale = 2,
 ): Promise<void> {
+  downloadBlob(await renderPng(svg, scale), filename);
+}
+
+/**
+ * Put the current notation on the clipboard as a PNG, so it can be pasted straight into
+ * a chat, a doc or a slide. Resolves to whether it landed: the clipboard image API is
+ * missing in some browsers, and elsewhere the write is refused unless the document has
+ * focus and permission, none of which is worth failing loudly over.
+ *
+ * The rasterization is handed to `ClipboardItem` still pending rather than awaited first.
+ * Clipboard writes are only allowed while the user's click is being handled, and awaiting
+ * anything beforehand spends that window — passing the promise lets the browser hold the
+ * gesture open until the blob arrives.
+ */
+export async function copyPng(svg: SVGSVGElement, scale = 2): Promise<boolean> {
+  if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) return false;
+
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': renderPng(svg, scale) })]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Rasterize the notation to a PNG blob. The SVG is drawn onto a canvas scaled up
+ * (default 2×) so the image stays sharp, over a white background matching the paper.
+ */
+async function renderPng(svg: SVGSVGElement, scale: number): Promise<Blob> {
   const markup = await buildStandaloneSvg(svg);
   const { width, height } = svgSize(svg);
   const url = URL.createObjectURL(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }));
@@ -60,7 +87,7 @@ export async function exportPng(
 
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('Failed to encode PNG');
-    downloadBlob(blob, filename);
+    return blob;
   } finally {
     URL.revokeObjectURL(url);
   }

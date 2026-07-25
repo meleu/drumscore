@@ -4,7 +4,7 @@
   import Staff from './components/Staff.svelte';
   import Transport from './components/Transport.svelte';
   import { AudioEngine } from '$lib/audio';
-  import { exportPng, exportSvg } from '$lib/export';
+  import { copyPng, exportPng, exportSvg } from '$lib/export';
   import { toNotation } from '$lib/notation/engine';
   import { patternStore } from '$lib/persistence';
   import { createSketchpad } from '$lib/sketchpad.svelte';
@@ -29,6 +29,10 @@
     } catch {
       return false;
     }
+  }
+
+  function handleCopyPng(): Promise<boolean> {
+    return staffSvg ? copyPng(staffSvg) : Promise.resolve(false);
   }
 
   function handleExportSvg() {
@@ -58,6 +62,7 @@
       onbpm={sketchpad.setBpm}
       onclear={sketchpad.clear}
       oncopylink={copyLink}
+      oncopypng={handleCopyPng}
       onexportsvg={handleExportSvg}
       onexportpng={handleExportPng}
       canexport={staffSvg !== null}
