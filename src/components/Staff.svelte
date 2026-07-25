@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { notationFontsReady } from '$lib/notation/fonts';
   import type { NotationModel } from '$lib/notation/model';
   import { renderNotation } from '$lib/notation/renderer';
 
@@ -16,28 +15,51 @@
   let { model, svg = $bindable(null) }: Props = $props();
 
   let width = $state(0);
-  let fontsReady = $state(false);
+  let failed = $state(false);
 
-  // VexFlow measures every glyph against its music font (Bravura, with Academico for
-  // text). Until those fonts arrive, a draw uses fallback metrics and stems/beams land
-  // in the wrong place — visible on the very first render, then silently corrected by
-  // any later redraw. They are served from our own bundle (see `$lib/notation/fonts`),
-  // so this is a local load, but still hold the first draw until it resolves.
-  notationFontsReady.then(() => (fontsReady = true));
-
-  // The attachment re-runs whenever the model changes, the container is resized, or the
-  // fonts become ready, redrawing the staff from scratch each time.
+  // The attachment re-runs whenever the model changes or the container is resized,
+  // redrawing the staff from scratch each time. The renderer waits for the music fonts
+  // before it draws anything, so a redraw that starts while an earlier one is still in
+  // flight marks that one stale and its result is dropped rather than mounted.
   const draw = (node: HTMLDivElement) => {
-    if (width > 0 && fontsReady) {
-      renderNotation(node, model, width);
-      svg = node.querySelector('svg');
-    } else {
+    if (width === 0) {
       svg = null;
+
+      return;
     }
+
+    let stale = false;
+    renderNotation(model, width).then(
+      (drawn) => {
+        if (stale) return;
+        node.replaceChildren(...(drawn ? [drawn] : []));
+        svg = drawn;
+        failed = false;
+      },
+      (error: unknown) => {
+        if (stale) return;
+        // Nothing to draw, but the grid, playback and sharing are all unaffected.
+        console.error(error);
+        svg = null;
+        failed = true;
+      },
+    );
+
+    return () => {
+      stale = true;
+    };
   };
 </script>
 
-<div class="staff" bind:clientWidth={width} {@attach draw}></div>
+<div class="staff">
+  <!-- The renderer owns this node's children outright, so nothing else may render into it. -->
+  <div bind:clientWidth={width} {@attach draw}></div>
+  {#if failed}
+    <p class="failed">
+      The music fonts didn't load, so the staff can't be drawn. Reloading may fix it.
+    </p>
+  {/if}
+</div>
 
 <style>
   /*
@@ -50,5 +72,12 @@
     border-radius: 6px;
     background: var(--color-paper);
     color: var(--color-ink);
+  }
+
+  /* Sits where the notation would have been, so the box is never blank without a reason. */
+  .failed {
+    margin: 0;
+    padding: 2rem 1rem;
+    text-align: center;
   }
 </style>

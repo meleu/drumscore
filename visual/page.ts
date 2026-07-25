@@ -1,5 +1,4 @@
 import { toNotation } from '$lib/notation/engine';
-import { notationFontsReady } from '$lib/notation/fonts';
 import { renderNotation } from '$lib/notation/renderer';
 import { FIXTURES, patternFor } from './fixtures';
 
@@ -12,9 +11,6 @@ import { FIXTURES, patternFor } from './fixtures';
 /** Fixed so the output never depends on the window the page happens to open in. */
 const WIDTH = 900;
 
-/** The size VexFlow draws noteheads at, and so the one worth asking the font about. */
-const GLYPH_SIZE = '30pt';
-
 declare global {
   interface Window {
     /** Set once every fixture is drawn; the driver waits on it. */
@@ -23,29 +19,25 @@ declare global {
 }
 
 async function draw() {
-  // VexFlow measures every glyph against Bravura through canvas.measureText. Drawing
-  // before the font arrives silently measures whatever face the browser falls back to —
-  // a notehead comes out 30px wide instead of 12 — and spreads the staff out wrong.
-  // Waiting is what makes the baselines mean anything, so the check refuses to run
-  // rather than quietly recording a bad layout.
-  await notationFontsReady;
-  if (!document.fonts.check(`${GLYPH_SIZE} Bravura`)) {
-    throw new Error('Bravura did not load; every glyph would be measured against a fallback');
-  }
+  const results: NonNullable<Window['visualCheck']> = [];
 
-  const results = FIXTURES.map((fixture) => {
+  for (const fixture of FIXTURES) {
     const section = document.createElement('section');
     const heading = document.createElement('h2');
     heading.textContent = fixture.name;
 
     const staff = document.createElement('div');
-    renderNotation(staff, toNotation(patternFor(fixture)), WIDTH);
+    // The renderer holds its own draw until the music fonts arrive, which is what makes
+    // the baselines mean anything, and rejects rather than recording a bad layout if they
+    // never do — surfacing as a page error the snapshot driver fails on.
+    const drawn = await renderNotation(toNotation(patternFor(fixture)), WIDTH);
+    if (drawn) staff.append(drawn);
 
     section.append(heading, staff);
     document.body.append(section);
 
-    return { name: fixture.name, svg: staff.innerHTML };
-  });
+    results.push({ name: fixture.name, svg: staff.innerHTML });
+  }
 
   window.visualCheck = results;
 }

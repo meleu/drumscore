@@ -1,6 +1,8 @@
 // `vexflow/core` is the library without its six bundled fonts; the two this app draws
-// with are registered by `./fonts`, which every caller loads before the first render.
+// with are registered by `./fonts`, which this module waits on before it draws.
 import { Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow/core';
+import type { SVGContext } from 'vexflow/core';
+import { notationFontsReady } from './fonts';
 import type {
   NotationEvent,
   NotationModel,
@@ -92,19 +94,36 @@ function toDrawablePart(part: NotationPart, beats: number, beatValue: number): D
   return { voice, beams };
 }
 
-export function renderNotation(container: HTMLDivElement, model: NotationModel, width: number) {
-  container.replaceChildren();
+/**
+ * Draws a NotationModel at the given width and resolves to the `<svg>` it drew — or null
+ * when the model has no measures. Where that element goes is the caller's business.
+ *
+ * Asynchronous on purpose. VexFlow sizes every glyph against Bravura through
+ * `canvas.measureText`, so drawing before the font arrives measures against whatever face
+ * the browser falls back to and puts stems and beams in the wrong place — silently, and
+ * only until some later redraw. Waiting here rather than at the call sites means no caller
+ * can draw too early. Rejects if the fonts never load, having drawn nothing.
+ */
+export async function renderNotation(
+  model: NotationModel,
+  width: number,
+): Promise<SVGSVGElement | null> {
+  await notationFontsReady;
 
   const { beats, beatValue } = model.timeSignature;
   const measureCount = model.measures.length;
-  if (measureCount === 0) return;
+  if (measureCount === 0) return null;
 
   const plainWidth = Math.max(
     MIN_MEASURE_WIDTH,
     (width - STAVE_LEFT * 2 - FIRST_MEASURE_EXTRA_WIDTH) / measureCount,
   );
 
-  const renderer = new Renderer(container, Renderer.Backends.SVG);
+  // VexFlow builds into an element it is given, so it gets a throwaway one and only the
+  // `<svg>` inside comes back out. Glyphs are measured against a standalone canvas rather
+  // than live layout, so nothing here needs the host to be in the document.
+  const host = document.createElement('div');
+  const renderer = new Renderer(host, Renderer.Backends.SVG);
   renderer.resize(STAVE_LEFT * 2 + plainWidth * measureCount + FIRST_MEASURE_EXTRA_WIDTH, HEIGHT);
   const context = renderer.getContext();
 
@@ -138,4 +157,6 @@ export function renderNotation(container: HTMLDivElement, model: NotationModel, 
 
     x += measureWidth;
   }
+
+  return (context as SVGContext).svg;
 }

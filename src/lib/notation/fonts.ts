@@ -10,8 +10,9 @@
  * they come from the `@vexflow-fonts` packages (which carry their license and upstream
  * version alongside the bytes) and Vite emits them as ordinary hashed assets.
  *
- * Font handling stops here and at the {@link ../../components/Staff.svelte Staff}: the
- * engine and the rest of the pure modules know nothing about it.
+ * Font handling stops here, at the {@link ./renderer.ts renderer} that waits on these
+ * fonts before it draws, and at the {@link ../export.ts exporter} that inlines them into
+ * a saved file: the engine and the rest of the pure modules know nothing about it.
  */
 
 import academicoUrl from '@vexflow-fonts/academico/academico.woff2?url';
@@ -44,6 +45,8 @@ VexFlow.setFonts(...Object.keys(NOTATION_FONTS));
 /**
  * Resolves once the fonts are registered with the browser. Drawing before then measures
  * every glyph against a fallback face — a notehead comes out 30px wide instead of 12 —
- * and spreads the staff out wrong, so callers hold their first render until this settles.
+ * and spreads the staff out wrong, so the renderer awaits this before every draw and
+ * nobody else needs to know it exists. Rejects if a font fails to load; it never resolves
+ * with a fallback quietly standing in.
  */
 export const notationFontsReady: Promise<void> = VexFlow.loadFonts(...VexFlow.getFonts());
