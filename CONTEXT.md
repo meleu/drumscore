@@ -60,7 +60,7 @@ _Avoid_: cursor, marker, position indicator
 **Notation model**:
 The abstract description of what the staff shows — measures, parts, notes, rests, beams.
 Says nothing about how it is drawn; no drawing library's vocabulary appears in it.
-_Avoid_: score, sheet, IR, AST, render model
+_Avoid_: score, IR, AST, render model, sheet (reserved for the exported file)
 
 **Measure**:
 One bar as written on the staff.
@@ -104,3 +104,9 @@ _Avoid_: beam, run, ligature, group
 The compact, URL-safe string form of a Pattern. One encoding serves two jobs: the payload
 of a share link, and the format the working pattern is autosaved in.
 _Avoid_: hash, permalink, serialization, save file, snapshot, blob
+
+**Sheet**:
+The staff as something you can take away: a self-contained SVG, a PNG file, or a PNG on the
+clipboard. Always a copy of what is on screen — it is made from the `<svg>` the staff drew,
+never drawn a second time of its own accord.
+_Avoid_: export, image, download, printout, score

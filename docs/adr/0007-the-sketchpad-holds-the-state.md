@@ -44,3 +44,7 @@ Playback`, `: PatternStore`), so a change to either lands as an error in the ada
 than at the wiring in `App.svelte`. What is left in the component is what genuinely needs
 the DOM: the clipboard write, the exported `<svg>` bound from the Staff, and the notation
 projection.
+
+The exported `<svg>` has since moved out to the Sheet (ADR-0008), which found that needing
+the DOM makes a module browser-only rather than component-only — and that this particular
+residue grew a third handler and a fourth prop one commit later.
