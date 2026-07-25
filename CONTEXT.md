@@ -27,6 +27,12 @@ One drum or cymbal that can be struck: kick, snare, closed hi-hat, open hi-hat, 
 ride. Each has its own row on the grid.
 _Avoid_: instrument, drum, track, lane, channel, row
 
+**Kit**:
+Every Voice there is, one row each: what the drum is called, whether it is played by the
+hands or the feet, and how it is written on the staff. The one place where what the user
+draws and what the staff shows are allowed to meet.
+_Avoid_: kit piece, drum map, instrument table, drum set
+
 **Step**:
 One cell of time on the grid — the finest rhythmic position a hit can occupy. At v1's
 resolution a step is a sixteenth note.

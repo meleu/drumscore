@@ -166,12 +166,20 @@ migration built.
 
 ### Acceptance criteria
 
-- [ ] No synth parameters have moved into the Kit; the audio engine's Tone construction is
+- [x] No synth parameters have moved into the Kit; the audio engine's Tone construction is
       unchanged.
-- [ ] The trigger map is typed as an exhaustive record over the Kit-derived `VoiceId`, so a
+- [x] The trigger map is typed as an exhaustive record over the Kit-derived `VoiceId`, so a
       new row with no synth cannot compile.
-- [ ] The codec carries a comment on payload width and the accepted breakage.
-- [ ] `CONTEXT.md` defines **Kit** under the appropriate heading, with its avoid-list.
-- [ ] An ADR is added under `docs/adr/` recording the decision.
-- [ ] The kit still has exactly six voices; no new voice and no new notehead style shipped.
-- [ ] `pnpm verify` and `pnpm verify:visual` both pass clean.
+- [x] The codec carries a comment on payload width and the accepted breakage.
+- [x] `CONTEXT.md` defines **Kit** under the appropriate heading, with its avoid-list.
+- [x] An ADR is added under `docs/adr/` recording the decision.
+- [x] The kit still has exactly six voices; no new voice and no new notehead style shipped.
+- [x] `pnpm verify` and `pnpm verify:visual` both pass clean.
+
+Audio and the codec were confirmed, not changed: no line of Tone construction or byte math
+moved, and both guarantees this phase claims were already load-bearing — the trigger map
+has been an exhaustive `Record<VoiceId, …>` since phase 1 gave it Kit-derived ids. What
+each gained is the comment saying so, at the seam where a future reader would otherwise
+have to work it out: why the audio engine keeps its synths, and why a wider kit breaks
+every existing encoded pattern on purpose. `docs/` joined `.prettierignore` alongside
+`plans/` — authored prose, kept as written rather than reflowed.

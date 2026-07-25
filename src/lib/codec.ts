@@ -13,6 +13,15 @@
  * next source (autosave, then the seed).
  */
 
+/**
+ * The Kit, named at the import because this format is built out of two of its properties:
+ * rows are encoded in canonical order, and the payload is `voices x steps` bits wide.
+ *
+ * Adding or removing a voice therefore changes the payload width, which breaks every
+ * string the old kit encoded — share links and autosaves alike. That breakage is accepted:
+ * the kit is expected to grow, and no migration path is built. The format version below is
+ * not what rescues those strings, and bumping it would not.
+ */
 import { KIT, type VoiceId } from './kit';
 import {
   createPattern,

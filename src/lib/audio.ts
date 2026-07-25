@@ -27,7 +27,14 @@ import type { Playback } from './sketchpad.svelte';
 /** Notified of the playing column as the loop advances; `null` when playback stops. */
 export type StepListener = (step: number | null) => void;
 
-/** One trigger fn per voice, plus a disposer for every Tone node it created. */
+/**
+ * One trigger fn per voice, plus a disposer for every Tone node it created.
+ *
+ * The map is an exhaustive record over the Kit's voices, deliberately: a drum added to the
+ * Kit with no synth here is a compile error rather than a drum that is drawable and
+ * silent. What makes it sound stays on this side of the seam — no envelope, filter or
+ * volume belongs in a kit row.
+ */
 interface VoiceKit {
   triggers: Record<VoiceId, (time: number) => void>;
   dispose(): void;
