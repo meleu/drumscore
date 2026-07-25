@@ -45,16 +45,7 @@
   </header>
 
   <section aria-label="Transport controls">
-    <Transport
-      playing={sketchpad.playing}
-      bpm={sketchpad.pattern.bpm}
-      onplay={sketchpad.play}
-      onstop={sketchpad.stop}
-      onbpm={sketchpad.setBpm}
-      onclear={sketchpad.clear}
-      oncopylink={copyLink}
-      {sheet}
-    />
+    <Transport {sketchpad} {sheet} oncopylink={copyLink} />
   </section>
 
   <section aria-label="Pattern grid">

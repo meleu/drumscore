@@ -35,18 +35,18 @@ goes from 11 props to 3.
 
 ---
 
-## Step 1: `src/lib/sheet/` exists — **Todo**
+## Step 1: `src/lib/sheet/` exists — **Done**
 
 Create the directory and move the existing exporter into it, unchanged. Mirrors
 `src/lib/notation/`, which is the precedent for a multi-file concern.
 
-- [ ] `git mv src/lib/export.ts src/lib/sheet/export.ts`
-- [ ] Fix its own relative paths, which all gain a level:
+- [x] `git mv src/lib/export.ts src/lib/sheet/export.ts`
+- [x] Fix its own relative paths, which all gain a level:
   - `import { NOTATION_FONTS } from './notation/fonts'` → `'../notation/fonts'`
   - the `{@link ../components/Staff.svelte Staff}` doc link → `../../components/Staff.svelte`
-- [ ] Fix the inbound doc link in `src/lib/notation/fonts.ts` (the `{@link ../export.ts
+- [x] Fix the inbound doc link in `src/lib/notation/fonts.ts` (the `{@link ../export.ts
       exporter}` reference) → `../sheet/export.ts`
-- [ ] Update the import in `src/App.svelte` to `$lib/sheet/export` (temporary — step 4
+- [x] Update the import in `src/App.svelte` to `$lib/sheet/export` (temporary — step 4
       removes it entirely)
 
 **Done when** `pnpm run verify` passes and the app still exports SVG and PNG by hand.
@@ -57,7 +57,7 @@ the filename `export.ts` so that split lands as a clean diff.
 
 ---
 
-## Step 2: the naming rule — **Todo**
+## Step 2: the naming rule — **Done**
 
 A future feature lets the user name their beats; the Sheet derives filenames from that name.
 The rule lives here, tested directly. This is an internal seam — it is not part of the
@@ -76,13 +76,15 @@ export function filenameFor(name: string, extension: string): string;
 
 Slug rules, in order:
 
-- [ ] `normalize('NFKD')` and strip combining marks, so `Batida Nº1` → `batida-n1`
-- [ ] lowercase
-- [ ] anything not `a-z0-9` becomes a hyphen
-- [ ] collapse runs of hyphens; trim leading and trailing ones
-- [ ] cap at 60 characters, trimming any hyphen the cut leaves behind
-- [ ] empty result → `drumscore`
-- [ ] return `` `${slug}.${extension}` ``
+- [x] `normalize('NFKD')` and strip combining marks, so `Batida Nº1` → `batida-no1`
+      (this plan first said `batida-n1`; NFKD folds `º` to `o` rather than dropping it,
+      which is the better answer — the letter survives)
+- [x] lowercase
+- [x] anything not `a-z0-9` becomes a hyphen
+- [x] collapse runs of hyphens; trim leading and trailing ones
+- [x] cap at 60 characters, trimming any hyphen the cut leaves behind
+- [x] empty result → `drumscore`
+- [x] return `` `${slug}.${extension}` ``
 
 Create `src/lib/sheet/filename.test.ts` covering: a plain name; a name with capitals and
 spaces; accented characters; punctuation-only (falls back); empty string (falls back);
@@ -92,7 +94,7 @@ whitespace-only (falls back); a name longer than the cap; both extensions.
 
 ---
 
-## Step 3: the Sheet module — **Todo**
+## Step 3: the Sheet module — **Done**
 
 Create `src/lib/sheet/sheet.svelte.ts`. A runes module, so a component that reads
 `sheet.ready` subscribes by reading it — ADR-0007 settled this over a plain class with a
@@ -120,66 +122,73 @@ export function createSheet({ name }: SheetDeps): Sheet;
 
 Implementation shape:
 
-- [ ] `let element = $state.raw<SVGSVGElement | null>(null)` — raw, as the sketchpad does:
+- [x] `let element = $state.raw<SVGSVGElement | null>(null)` — raw, as the sketchpad does:
       the element is only ever replaced wholesale and must not be proxied
-- [ ] `get ready() { return element !== null; }`
-- [ ] `drawn(svg) { element = svg; }`
-- [ ] One private `attempt(action)` helper that all three methods funnel through: it reads
+- [x] `get ready() { return element !== null; }`
+- [x] `drawn(svg) { element = svg; }`
+- [x] One private `attempt(action)` helper that all three methods funnel through: it reads
       `element`, **returns `false` before the `try` block** when there is none, and otherwise
       runs the action inside `try/catch`, logging with `console.error` and returning `false`
       on a throw. This is the single place the fire-and-forget defect is fixed.
-- [ ] `saveSvg` and `savePng` call `exportSvg` / `exportPng` with
+- [x] `saveSvg` and `savePng` call `exportSvg` / `exportPng` with
       `filenameFor(name(), 'svg' | 'png')`; `copy` calls `copyPng`. The `scale` parameter
       keeps its default — no caller varies it.
 
 Create `src/lib/sheet/sheet.test.ts`, in the existing `node` environment, no new setup:
 
-- [ ] `ready` is false on a fresh sheet
-- [ ] `ready` is true after `drawn(stub)` and false again after `drawn(null)`, where `stub`
+- [x] `ready` is false on a fresh sheet
+- [x] `ready` is true after `drawn(stub)` and false again after `drawn(null)`, where `stub`
       is `{} as SVGSVGElement`
-- [ ] each of the three methods **resolves** to `false` when nothing is drawn
-- [ ] each of the three methods **resolves** rather than rejecting when an element is drawn
+- [x] each of the three methods **resolves** to `false` when nothing is drawn
+- [x] each of the three methods **resolves** rather than rejecting when an element is drawn
 
 **On that last case, and this is the point:** in the node environment it resolves `false`
 because there is no `document`, not because the Sheet decided anything. Assert only
 *non-rejection* there — that is the real defect being fixed, and it is genuinely provable.
 Do not dress it up as a test of the guard. ADR-0008 says the same thing.
 
+**Not in the plan, needed anyway**: `sheet.test.ts` is the first node test to import
+`notation/fonts`, which starts `VexFlow.loadFonts()` at module scope. That promise rejects
+with no `FontFace` API and nothing was attached to it, so vitest failed the run on an
+unhandled rejection. `notationFontsReady.catch(() => {})` in `fonts.ts` fixes it, and fixes
+the same latent case in the browser: a staff of zero width never draws, so nothing awaits
+the promise there either. Everyone who does await it still sees the failure.
+
 **Done when** `pnpm run verify` passes. The module is not wired to anything yet.
 
 ---
 
-## Step 4: wire it — **Todo**
+## Step 4: wire it — **Done**
 
 ### `src/components/Staff.svelte`
 
-- [ ] Replace the `svg?: SVGSVGElement | null` bindable prop with
+- [x] Replace the `svg?: SVGSVGElement | null` bindable prop with
       `ondrawn: (svg: SVGSVGElement | null) => void`
-- [ ] Replace all three writes to `svg` with `ondrawn(…)`: the zero-width early return
+- [x] Replace all three writes to `svg` with `ondrawn(…)`: the zero-width early return
       (`ondrawn(null)`), the success path (`ondrawn(drawn)`), and the error path
       (`ondrawn(null)`)
-- [ ] Delete the `// eslint-disable-next-line no-useless-assignment` comment and the
+- [x] Delete the `// eslint-disable-next-line no-useless-assignment` comment and the
       paragraph above it explaining the bindable — both exist only because of the binding
-- [ ] Leave everything else alone: the `{@attach}`, the `stale` flag, the `failed` message
+- [x] Leave everything else alone: the `{@attach}`, the `stale` flag, the `failed` message
       and the ADR-0006 contract are untouched
 
 ### `src/App.svelte`
 
-- [ ] Delete `let staffSvg = $state<SVGSVGElement | null>(null)`
-- [ ] Delete `handleCopyPng`, `handleExportSvg`, `handleExportPng`
-- [ ] Delete the `$lib/export` import
-- [ ] Add `const sheet = createSheet({ name: () => '' })` beside the sketchpad, with a
+- [x] Delete `let staffSvg = $state<SVGSVGElement | null>(null)`
+- [x] Delete `handleCopyPng`, `handleExportSvg`, `handleExportPng`
+- [x] Delete the `$lib/export` import
+- [x] Add `const sheet = createSheet({ name: () => '' })` beside the sketchpad, with a
       comment noting the `''` is the unnamed-beat case until Pattern carries a name
-- [ ] `<Staff model={notation} ondrawn={sheet.drawn} />`
-- [ ] Keep `copyLink` exactly as it is
+- [x] `<Staff model={notation} ondrawn={sheet.drawn} />`
+- [x] Keep `copyLink` exactly as it is
 
 ### `src/components/Transport.svelte`
 
-- [ ] Replace `oncopypng`, `onexportsvg`, `onexportpng` and `canexport` with one `sheet: Sheet` prop
-- [ ] The two export buttons call `sheet.saveSvg()` / `sheet.savePng()`; both are
+- [x] Replace `oncopypng`, `onexportsvg`, `onexportpng` and `canexport` with one `sheet: Sheet` prop
+- [x] The two export buttons call `sheet.saveSvg()` / `sheet.savePng()`; both are
       `disabled={!sheet.ready}`
-- [ ] Copy PNG goes through the existing `handleCopy('png', sheet.copy)`
-- [ ] The export buttons may keep ignoring their booleans for now — the interface no longer
+- [x] Copy PNG goes through the existing `handleCopy('png', sheet.copy)`
+- [x] The export buttons may keep ignoring their booleans for now — the interface no longer
       lies about failure, which is the point
 
 **Done when** `pnpm run verify` passes, `pnpm run verify:visual` reports every baseline

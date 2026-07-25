@@ -1,21 +1,21 @@
 <script lang="ts">
   import { MAX_BPM, MIN_BPM } from '$lib/pattern';
   import type { Sheet } from '$lib/sheet/sheet.svelte';
+  import type { Sketchpad } from '$lib/sketchpad.svelte';
 
   interface Props {
-    playing: boolean;
-    bpm: number;
-    onplay: () => void;
-    onstop: () => void;
-    onbpm: (bpm: number) => void;
-    onclear: () => void;
-    oncopylink: () => Promise<boolean>;
+    // The two things the controls act on, handed over whole rather than unpacked into a
+    // prop per button: reading them here is what keeps the display in step.
+    sketchpad: Sketchpad;
     // What can be taken away from the staff. Not ready before its first draw, when
     // there is nothing to export yet.
     sheet: Sheet;
+    // Sharing is the app's, not the sketchpad's: the sketchpad says what the URL is,
+    // and putting it on the clipboard needs a browser.
+    oncopylink: () => Promise<boolean>;
   }
 
-  let { playing, bpm, onplay, onstop, onbpm, onclear, oncopylink, sheet }: Props = $props();
+  let { sketchpad, sheet, oncopylink }: Props = $props();
 
   // Which copy button is currently showing its transient confirmation, if any. Only one
   // at a time, so a second copy replaces the first rather than leaving both lit.
@@ -29,17 +29,24 @@
     clearTimeout(copiedTimer);
     copiedTimer = setTimeout(() => (copied = null), 1500);
   }
+
+  // Starting audio needs a gesture the browser can refuse, and it says so by rejecting.
+  // The sketchpad is left stopped either way, so there is nothing to show the user —
+  // but the rejection still needs somewhere to land.
+  function play() {
+    sketchpad.play().catch((error: unknown) => console.error(error));
+  }
 </script>
 
 <div class="transport">
   <button
     type="button"
     class="play"
-    class:playing
-    onclick={() => (playing ? onstop() : onplay())}
-    aria-pressed={playing}
+    class:playing={sketchpad.playing}
+    onclick={() => (sketchpad.playing ? sketchpad.stop() : play())}
+    aria-pressed={sketchpad.playing}
   >
-    {playing ? 'Stop' : 'Play'}
+    {sketchpad.playing ? 'Stop' : 'Play'}
   </button>
 
   <label class="bpm">
@@ -49,13 +56,13 @@
       min={MIN_BPM}
       max={MAX_BPM}
       step="1"
-      value={bpm}
-      oninput={(event) => onbpm(event.currentTarget.valueAsNumber)}
+      value={sketchpad.pattern.bpm}
+      oninput={(event) => sketchpad.setBpm(event.currentTarget.valueAsNumber)}
     />
     BPM
   </label>
 
-  <button type="button" class="clear" onclick={() => onclear()}> Clear </button>
+  <button type="button" class="clear" onclick={() => sketchpad.clear()}> Clear </button>
 
   <button type="button" class="copy" onclick={() => handleCopy('link', oncopylink)}>
     {copied === 'link' ? 'Copied!' : 'Copy link'}
