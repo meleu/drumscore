@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { decode, encode } from './codec';
+import { KIT } from './kit';
 import {
   createPattern,
   DEFAULT_DIMENSIONS,
@@ -7,7 +8,6 @@ import {
   setBpm,
   toggle,
   totalSteps,
-  VOICES,
   type Pattern,
 } from './pattern';
 
@@ -15,7 +15,7 @@ import {
 function fullPattern(): Pattern {
   const steps = totalSteps(DEFAULT_DIMENSIONS);
   let pattern = createPattern();
-  for (const voice of VOICES) {
+  for (const voice of KIT) {
     for (let step = 0; step < steps; step++) {
       pattern = toggle(pattern, voice.id, step);
     }

@@ -8,28 +8,14 @@
  * Operations are pure: they return a new pattern rather than mutating the old one.
  */
 
-export const VOICE_IDS = ['kick', 'snare', 'closedHiHat', 'openHiHat', 'crash', 'ride'] as const;
-
-export type VoiceId = (typeof VOICE_IDS)[number];
-
-export interface Voice {
-  id: VoiceId;
-  label: string;
-}
+import { KIT, type VoiceId } from './kit';
 
 /**
- * The canonical voice order. Fixed: the pattern codec encodes rows in this order, so
- * reordering it would invalidate existing share links. How the grid *displays* the
- * rows is a separate, presentational concern.
+ * Which drums there are is the Kit's business, not the Pattern's. The type is re-exported
+ * because the interfaces below are stated in terms of it; anything that needs the *list*
+ * reads `kit.ts` directly.
  */
-export const VOICES: readonly Voice[] = [
-  { id: 'kick', label: 'Kick' },
-  { id: 'snare', label: 'Snare' },
-  { id: 'closedHiHat', label: 'Closed Hi-hat' },
-  { id: 'openHiHat', label: 'Open Hi-hat' },
-  { id: 'crash', label: 'Crash' },
-  { id: 'ride', label: 'Ride' },
-];
+export type { VoiceId };
 
 export interface GridDimensions {
   /** Steps per beat. 4 gives 16th-note resolution. */
@@ -73,7 +59,7 @@ export function createPattern(
 ): Pattern {
   const steps = totalSteps(dimensions);
   const rows = Object.fromEntries(
-    VOICES.map((voice) => [voice.id, new Array<boolean>(steps).fill(false)]),
+    KIT.map((voice) => [voice.id, new Array<boolean>(steps).fill(false)]),
   ) as Record<VoiceId, boolean[]>;
 
   return { dimensions, bpm, rows };

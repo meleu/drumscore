@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { isHit, stepsPerBar, totalSteps, VOICES, type Pattern, type VoiceId } from '$lib/pattern';
+  import { KIT } from '$lib/kit';
+  import { isHit, stepsPerBar, totalSteps, type Pattern, type VoiceId } from '$lib/pattern';
 
   interface Props {
     pattern: Pattern;
@@ -10,9 +11,9 @@
 
   let { pattern, currentStep = null, ontoggle }: Props = $props();
 
-  // The model's canonical order runs low-to-high (kick first); a drummer reads a grid
+  // The Kit's canonical order runs low-to-high (kick first); a drummer reads a grid
   // the other way up, with the cymbals on top and the kick at the bottom.
-  const rows = $derived([...VOICES].toReversed());
+  const rows = $derived([...KIT].toReversed());
 
   const steps = $derived(Array.from({ length: totalSteps(pattern.dimensions) }, (_, step) => step));
   const stepsPerBeat = $derived(pattern.dimensions.stepsPerBeat);

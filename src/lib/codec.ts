@@ -13,15 +13,14 @@
  * next source (autosave, then the seed).
  */
 
+import { KIT, type VoiceId } from './kit';
 import {
   createPattern,
   MAX_BPM,
   MIN_BPM,
   totalSteps,
-  VOICES,
   type GridDimensions,
   type Pattern,
-  type VoiceId,
 } from './pattern';
 
 /** Bumped only on a breaking change to the byte layout; old strings then decode to `null`. */
@@ -40,9 +39,9 @@ export function encode(pattern: Pattern): string {
   const { dimensions, bpm, rows } = pattern;
   const steps = totalSteps(dimensions);
 
-  const cellBytes = new Uint8Array(Math.ceil((steps * VOICES.length) / 8));
+  const cellBytes = new Uint8Array(Math.ceil((steps * KIT.length) / 8));
   let bit = 0;
-  for (const voice of VOICES) {
+  for (const voice of KIT) {
     const row = rows[voice.id];
     for (let step = 0; step < steps; step++, bit++) {
       if (row[step]) {
@@ -85,16 +84,16 @@ export function decode(encoded: string | null | undefined): Pattern | null {
   if (!isValidDimensions(dimensions)) return null;
 
   const steps = totalSteps(dimensions);
-  const expectedLength = HEADER_LENGTH + Math.ceil((steps * VOICES.length) / 8);
+  const expectedLength = HEADER_LENGTH + Math.ceil((steps * KIT.length) / 8);
   if (bytes.length !== expectedLength) return null;
 
   const pattern = createPattern(dimensions, clampBpm(bytes[5] ?? MIN_BPM));
   const rows = Object.fromEntries(
-    VOICES.map((voice) => [voice.id, new Array<boolean>(steps).fill(false)]),
+    KIT.map((voice) => [voice.id, new Array<boolean>(steps).fill(false)]),
   ) as Record<VoiceId, boolean[]>;
 
   let bit = 0;
-  for (const voice of VOICES) {
+  for (const voice of KIT) {
     const row = rows[voice.id];
     for (let step = 0; step < steps; step++, bit++) {
       const byte = bytes[HEADER_LENGTH + (bit >> 3)] ?? 0;

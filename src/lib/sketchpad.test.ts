@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createPattern, isHit, seed, VOICE_IDS, type Pattern } from './pattern';
+import { KIT } from './kit';
+import { createPattern, isHit, seed, type Pattern } from './pattern';
 import { createSketchpad, type PatternStore, type Playback } from './sketchpad.svelte';
 
 /**
@@ -180,7 +181,7 @@ describe('clearing', () => {
     sketchpad.clear();
 
     const { pattern } = sketchpad;
-    expect(VOICE_IDS.every((voice) => pattern.rows[voice].every((on) => !on))).toBe(true);
+    expect(KIT.every(({ id }) => pattern.rows[id].every((on) => !on))).toBe(true);
     expect(pattern.bpm).toBe(before.bpm);
     expect(pattern.dimensions).toEqual(before.dimensions);
   });

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { KIT } from './kit';
 import {
   clear,
   createPattern,
   isHit,
   seed,
   totalSteps,
-  VOICE_IDS,
   type Pattern,
   type VoiceId,
 } from './pattern';
@@ -46,9 +46,9 @@ describe('clear', () => {
 
     expect(cleared.bpm).toBe(seed().bpm);
     expect(cleared.dimensions).toEqual(seed().dimensions);
-    for (const voice of VOICE_IDS) {
+    for (const { id } of KIT) {
       for (let step = 0; step < steps; step++) {
-        expect(isHit(cleared, voice, step)).toBe(false);
+        expect(isHit(cleared, id, step)).toBe(false);
       }
     }
   });

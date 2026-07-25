@@ -20,7 +20,8 @@ import {
   Sequence,
   start,
 } from 'tone';
-import { isHit, totalSteps, VOICE_IDS, type Pattern, type VoiceId } from './pattern';
+import { KIT, type VoiceId } from './kit';
+import { isHit, totalSteps, type Pattern } from './pattern';
 import type { Playback } from './sketchpad.svelte';
 
 /** Notified of the playing column as the loop advances; `null` when playback stops. */
@@ -164,7 +165,7 @@ export class AudioEngine implements Playback {
 
     this.sequence = new Sequence<number>(
       (time, step) => {
-        for (const id of VOICE_IDS) {
+        for (const { id } of KIT) {
           if (isHit(this.pattern, id, step)) this.voices.triggers[id](time);
         }
         // The sequence callback fires ahead of the audible moment; Draw defers the
