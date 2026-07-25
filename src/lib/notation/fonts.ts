@@ -50,3 +50,9 @@ VexFlow.setFonts(...Object.keys(NOTATION_FONTS));
  * with a fallback quietly standing in.
  */
 export const notationFontsReady: Promise<void> = VexFlow.loadFonts(...VexFlow.getFonts());
+
+// Started at import time, so it may reject with nobody yet awaiting it — a staff of zero
+// width never draws, and a test importing this module for `NOTATION_FONTS` alone never
+// draws either. Attaching a handler here keeps that from surfacing as an unhandled
+// rejection; everyone who awaits the promise still sees the failure.
+notationFontsReady.catch(() => {});
