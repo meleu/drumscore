@@ -55,7 +55,11 @@ export default defineConfig(({ command }) => ({
     open: true,
   },
   test: {
-    // The tested modules (notation engine, pattern codec) are pure: no DOM needed.
+    // No DOM needed. The pure modules — notation engine, pattern codec — need none by
+    // nature, and the runes modules are written so their logic needs none either: the
+    // sketchpad's transitions run against fake adapters, and the sheet's readiness is
+    // decided before it reaches a browser call. What genuinely needs a browser is the
+    // drawing, and `verify:visual` renders that in a real one.
     environment: 'node',
     globals: true,
     include: ['src/**/*.{test,spec}.ts'],

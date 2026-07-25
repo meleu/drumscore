@@ -198,20 +198,20 @@ drawn.
 
 ---
 
-## Step 5: fold Transport down to three props — **Todo**
+## Step 5: fold Transport down to three props — **Done**
 
 Candidate 4 of the architecture review, folded in on request. `Transport` currently takes
 six props that are just the sketchpad unpacked.
 
-- [ ] Props become exactly: `sketchpad: Sketchpad`, `sheet: Sheet`, `oncopylink: () => Promise<boolean>`
-- [ ] Read `sketchpad.playing` and `sketchpad.pattern.bpm` directly; call `sketchpad.stop()`,
+- [x] Props become exactly: `sketchpad: Sketchpad`, `sheet: Sheet`, `oncopylink: () => Promise<boolean>`
+- [x] Read `sketchpad.playing` and `sketchpad.pattern.bpm` directly; call `sketchpad.stop()`,
       `sketchpad.setBpm(…)`, `sketchpad.clear()`
-- [ ] **Watch out:** `sketchpad.play()` returns a promise that rejects when the browser
+- [x] **Watch out:** `sketchpad.play()` returns a promise that rejects when the browser
       refuses audio, and `onplay={sketchpad.play}` currently leaves that rejection
       unhandled. Calling it directly must not repeat that — `catch` it and `console.error`.
       The sketchpad already leaves `playing` false, so behaviour is otherwise unchanged.
-- [ ] `App.svelte` passes `<Transport {sketchpad} {sheet} oncopylink={copyLink} />`
-- [ ] The `copied` / `copiedTimer` flash state stays local to `Transport` — it is
+- [x] `App.svelte` passes `<Transport {sketchpad} {sheet} oncopylink={copyLink} />`
+- [x] The `copied` / `copiedTimer` flash state stays local to `Transport` — it is
       presentation, and it is shared by both copy buttons
 
 **Done when** `pnpm run verify` passes and, by hand: play/stop, the tempo field, Clear, the
@@ -219,9 +219,9 @@ playhead, Copy link, Copy PNG and both exports all behave as before.
 
 ---
 
-## Step 6: tidy — **Todo**
+## Step 6: tidy — **Done**
 
-- [ ] `vite.config.ts`'s `test.environment` comment reads "The tested modules (notation
+- [x] `vite.config.ts`'s `test.environment` comment reads "The tested modules (notation
       engine, pattern codec) are pure: no DOM needed." That has been stale since the
       sketchpad arrived. Widen it to say the node environment covers the pure modules plus
       the runes modules' logic — the sketchpad's transitions and the Sheet's readiness —
@@ -231,12 +231,12 @@ playhead, Copy link, Copy PNG and both exports all behave as before.
 
 ## Definition of done
 
-- [ ] `pnpm run verify` clean
-- [ ] `pnpm run verify:visual` — 13 of 13 baselines match, none updated
-- [ ] No `SVGSVGElement` appears in `src/App.svelte`
-- [ ] `src/components/Transport.svelte` has 3 props
-- [ ] `grep -rn "lib/export" src/` returns nothing
-- [ ] New tests: the naming rule, and the Sheet's readiness and non-rejection
+- [x] `pnpm run verify` clean
+- [x] `pnpm run verify:visual` — 13 of 13 baselines match, none updated
+- [x] No `SVGSVGElement` appears in `src/App.svelte`
+- [x] `src/components/Transport.svelte` has 3 props
+- [x] `grep -rn "lib/export" src/` returns nothing
+- [x] New tests: the naming rule, and the Sheet's readiness and non-rejection
 
 ## Do not
 
