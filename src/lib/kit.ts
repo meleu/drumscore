@@ -18,7 +18,11 @@
 
 import type { Notehead, PartId } from './notation/model';
 
-export interface KitVoice {
+/**
+ * What every row of the Kit has to state. The list below is checked against it, so a drum
+ * missing any of these never compiles.
+ */
+interface KitRow {
   id: string;
   /** What a human reads: the grid's row label. */
   label: string;
@@ -74,13 +78,21 @@ export const KIT = [
     part: 'hands',
     notehead: { style: 'cross', position: { step: 'f', octave: 5 } },
   },
-] as const satisfies readonly KitVoice[];
+] as const satisfies readonly KitRow[];
 
 /**
  * The voices, named. Derived from the Kit's entries, so there is exactly one list of
  * voices in the codebase and no second list for it to fall out of step with.
  */
 export type VoiceId = (typeof KIT)[number]['id'];
+
+/**
+ * One drum, as the Kit states it — a row whose id is one of the voices above, so that
+ * reading a row hands you a voice the rest of the app already knows how to use.
+ */
+export interface KitVoice extends KitRow {
+  id: VoiceId;
+}
 
 /**
  * The order the grid draws its rows in: cymbals at the top, kick at the bottom — the way a

@@ -1,4 +1,5 @@
-import { isHit, stepsPerBar, type GridDimensions, type Pattern, type VoiceId } from '$lib/pattern';
+import { KIT, type KitVoice } from '$lib/kit';
+import { isHit, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
 import type {
   BeamGroup,
   NotationEvent,
@@ -24,22 +25,16 @@ import type {
  * beat and the time until the next hit is filled with rests. That is what turns a grid of
  * 16th-note cells into readable rhythm while keeping the pulse visible, and it is the same
  * treatment for every drum — the crash and the open hi-hat included.
+ *
+ * Which drums there are, how each one is written and which part it is written into are the
+ * Kit's answers, read from there rather than restated here. What stays is what is true of a
+ * part rather than of a drum.
  */
 
-/** Where each drum sits on the staff, and what its notehead looks like. */
-const NOTEHEADS: Readonly<Record<VoiceId, Notehead>> = {
-  kick: { style: 'normal', position: { step: 'f', octave: 4 } },
-  snare: { style: 'normal', position: { step: 'c', octave: 5 } },
-  closedHiHat: { style: 'cross', position: { step: 'g', octave: 5 } },
-  openHiHat: { style: 'cross', position: { step: 'g', octave: 5 } },
-  crash: { style: 'cross', position: { step: 'a', octave: 5 } },
-  ride: { style: 'cross', position: { step: 'f', octave: 5 } },
-};
-
+/** How a part is written: which way its stems point, and where its rests sit. */
 interface Part {
   id: PartId;
   stemDirection: StemDirection;
-  voices: readonly VoiceId[];
   /** Rests keep out of the noteheads' way by sitting in their own part of the staff. */
   restPosition: StaffPosition;
   /** The whole rest is the odd one out: it hangs from the line above the others. */
@@ -50,18 +45,24 @@ const PARTS: readonly Part[] = [
   {
     id: 'hands',
     stemDirection: 'up',
-    voices: ['snare', 'closedHiHat', 'openHiHat', 'crash', 'ride'],
     restPosition: { step: 'b', octave: 4 },
     wholeRestPosition: { step: 'd', octave: 5 },
   },
   {
     id: 'feet',
     stemDirection: 'down',
-    voices: ['kick'],
     restPosition: { step: 'f', octave: 4 },
     wholeRestPosition: { step: 'g', octave: 4 },
   },
 ];
+
+/**
+ * The drums written into one part, in canonical order — a filter over the Kit rather than a
+ * second list beside it, so the two cannot disagree about which drum belongs where.
+ */
+function voicesOf(part: Part): readonly KitVoice[] {
+  return KIT.filter((voice) => voice.part === part.id);
+}
 
 /** How many of each note value make a whole note. */
 const VALUES_PER_WHOLE: readonly [NoteValue, number][] = [
@@ -215,14 +216,13 @@ function heightOf({ step, octave }: StaffPosition): number {
  * whether they ring — collapse into one head, because writing them twice would stack two
  * identical glyphs on the same line.
  */
-function noteheadsAt(pattern: Pattern, part: Part, at: number): Notehead[] {
-  const struck = part.voices.filter((voice) => isHit(pattern, voice, at));
+function noteheadsAt(pattern: Pattern, voices: readonly KitVoice[], at: number): Notehead[] {
+  const struck = voices.filter((voice) => isHit(pattern, voice.id, at));
   const heads = new Map(
-    struck.map((voice) => {
-      const head = NOTEHEADS[voice];
-
-      return [`${head.style}:${head.position.step}${head.position.octave}`, head];
-    }),
+    struck.map(({ notehead: head }) => [
+      `${head.style}:${head.position.step}${head.position.octave}`,
+      head,
+    ]),
   );
 
   return [...heads.values()].sort((a, b) => heightOf(a.position) - heightOf(b.position));
@@ -230,11 +230,12 @@ function noteheadsAt(pattern: Pattern, part: Part, at: number): Notehead[] {
 
 /** The hits of one part within one bar, at steps relative to that bar. */
 function hitsIn(pattern: Pattern, part: Part, bar: number, barLength: number): Hit[] {
+  const voices = voicesOf(part);
   const hits: Hit[] = [];
 
   for (let step = 0; step < barLength; step += 1) {
     const at = bar * barLength + step;
-    const noteheads = noteheadsAt(pattern, part, at);
+    const noteheads = noteheadsAt(pattern, voices, at);
 
     if (noteheads.length > 0) hits.push({ step, noteheads });
   }

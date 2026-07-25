@@ -301,6 +301,18 @@ describe('noteheads', () => {
     expect(firstChord(patternWith({ [voice]: [0] }), part)).toEqual([head]);
   });
 
+  /**
+   * The table above says which head each drum is written with; this says which part writes
+   * it. Together they pin what the engine used to state as two literals and now derives
+   * from the Kit — so a drum that drifted into the wrong part, or into both, fails here.
+   */
+  it.each(drums)('writes %s into no part but the %s', (voice, part) => {
+    const other: PartId = part === 'hands' ? 'feet' : 'hands';
+    const silent = partOf(measureOf(patternWith({ [voice]: [0] })), other);
+
+    expect(rhythm(silent.events)).toBe('rw');
+  });
+
   it('merges simultaneous hands hits into one chord, ordered low to high', () => {
     const pattern = patternWith({ snare: [0], crash: [0], ride: [0] });
 
