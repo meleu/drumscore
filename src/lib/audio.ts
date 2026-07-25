@@ -21,6 +21,7 @@ import {
   start,
 } from 'tone';
 import { isHit, totalSteps, VOICE_IDS, type Pattern, type VoiceId } from './pattern';
+import type { Playback } from './sketchpad.svelte';
 
 /** Notified of the playing column as the loop advances; `null` when playback stops. */
 export type StepListener = (step: number | null) => void;
@@ -98,7 +99,8 @@ function buildVoices(): VoiceKit {
   return { triggers, dispose: () => nodes.forEach((node) => node.dispose()) };
 }
 
-export class AudioEngine {
+/** The sketchpad's Playback adapter that actually makes noise. */
+export class AudioEngine implements Playback {
   private pattern: Pattern;
   private readonly voices: VoiceKit;
   private sequence: Sequence<number> | null = null;

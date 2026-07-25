@@ -63,6 +63,9 @@ export default defineConfig(({ command }) => ({
       provider: 'v8',
       include: ['src/lib/**/*.ts'],
       exclude: ['src/lib/**/*.{test,spec}.ts'],
+      // Runes modules (`*.svelte.ts`) never appear in this report: the Svelte plugin
+      // compiles them and the v8 provider does not attribute the result back. The
+      // sketchpad is missing here despite `sketchpad.test.ts` covering it end to end.
     },
   },
 }));

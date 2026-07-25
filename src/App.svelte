@@ -6,56 +6,25 @@
   import { AudioEngine } from '$lib/audio';
   import { exportPng, exportSvg } from '$lib/export';
   import { toNotation } from '$lib/notation/engine';
-  import { clear, setBpm, toggle, type VoiceId } from '$lib/pattern';
-  import { loadInitialPattern, save, shareUrl } from '$lib/persistence';
+  import { patternStore } from '$lib/persistence';
+  import { createSketchpad } from '$lib/sketchpad.svelte';
 
-  // Load precedence (URL -> autosave -> seed) lives in the persistence module.
-  const initialPattern = loadInitialPattern();
-  let pattern = $state(initialPattern);
-  let playing = $state(false);
-  // The column the audio engine is currently sounding; null when stopped.
-  let currentStep = $state<number | null>(null);
+  // Every state transition lives behind this seam — the app below only draws what the
+  // sketchpad holds and calls back into it. Sound and storage are handed in, so nothing
+  // here decides how a pattern is remembered or played.
+  const sketchpad = createSketchpad({
+    store: patternStore,
+    playback: (pattern) => new AudioEngine(pattern),
+  });
+  $effect(() => () => sketchpad.dispose());
+
   // The live notation SVG, bound from the Staff, that the export controls act on.
   let staffSvg = $state<SVGSVGElement | null>(null);
-  const notation = $derived(toNotation(pattern));
-
-  // Seeded from the initial value; the effects below keep it in sync from here on.
-  const engine = new AudioEngine(initialPattern);
-  engine.onStep((step) => (currentStep = step));
-
-  // Keep the engine in step with the pattern (cells and tempo) while it plays.
-  $effect(() => engine.setPattern(pattern));
-  $effect(() => engine.setBpm(pattern.bpm));
-  $effect(() => () => engine.dispose());
-
-  // Autosave every edit so a refresh restores the working pattern.
-  $effect(() => save(pattern));
-
-  function handleToggle(voice: VoiceId, step: number) {
-    pattern = toggle(pattern, voice, step);
-  }
-
-  async function play() {
-    await engine.play();
-    playing = true;
-  }
-
-  function stop() {
-    engine.stop();
-    playing = false;
-  }
-
-  function handleBpm(bpm: number) {
-    pattern = setBpm(pattern, bpm);
-  }
-
-  function handleClear() {
-    pattern = clear(pattern);
-  }
+  const notation = $derived(toNotation(sketchpad.pattern));
 
   async function copyLink(): Promise<boolean> {
     try {
-      await navigator.clipboard.writeText(shareUrl(pattern));
+      await navigator.clipboard.writeText(sketchpad.shareUrl());
       return true;
     } catch {
       return false;
@@ -82,12 +51,12 @@
 
   <section aria-label="Transport controls">
     <Transport
-      {playing}
-      bpm={pattern.bpm}
-      onplay={play}
-      onstop={stop}
-      onbpm={handleBpm}
-      onclear={handleClear}
+      playing={sketchpad.playing}
+      bpm={sketchpad.pattern.bpm}
+      onplay={sketchpad.play}
+      onstop={sketchpad.stop}
+      onbpm={sketchpad.setBpm}
+      onclear={sketchpad.clear}
       oncopylink={copyLink}
       onexportsvg={handleExportSvg}
       onexportpng={handleExportPng}
@@ -96,7 +65,11 @@
   </section>
 
   <section aria-label="Pattern grid">
-    <Grid {pattern} {currentStep} ontoggle={handleToggle} />
+    <Grid
+      pattern={sketchpad.pattern}
+      currentStep={sketchpad.currentStep}
+      ontoggle={sketchpad.toggle}
+    />
   </section>
 
   <section aria-label="Notation">

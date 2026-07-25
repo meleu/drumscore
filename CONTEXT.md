@@ -7,6 +7,14 @@ _shows_ are different things, and the code keeps them apart.
 
 ## Language
 
+### The session
+
+**Sketchpad**:
+What the user is working on right now: the pattern they have open, whether it is playing,
+and where the playhead has got to. Everything the user can do — draw a hit, set the tempo,
+clear, play, stop, share — is a change to the sketchpad.
+_Avoid_: app, editor, workspace, session, document, state
+
 ### The loop as drawn
 
 **Pattern**:

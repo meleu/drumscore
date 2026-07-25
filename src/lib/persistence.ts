@@ -10,6 +10,7 @@
 
 import { decode, encode } from './codec';
 import { seed, type Pattern } from './pattern';
+import type { PatternStore } from './sketchpad.svelte';
 
 const STORAGE_KEY = 'drumscore:pattern';
 /** The query parameter a share link carries the encoded pattern in. */
@@ -38,6 +39,16 @@ export function shareUrl(pattern: Pattern): string {
   url.searchParams.set(URL_PARAM, encode(pattern));
   return url.toString();
 }
+
+/**
+ * The browser adapter for the sketchpad's pattern store: the URL and localStorage. The
+ * sketchpad knows only the three operations, so a test can stand in for the lot.
+ */
+export const patternStore: PatternStore = {
+  load: loadInitialPattern,
+  save,
+  shareUrl,
+};
 
 function fromUrl(): Pattern | null {
   try {
