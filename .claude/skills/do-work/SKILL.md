@@ -11,7 +11,7 @@ Execute a complete unit of work: plan it, build it, validate it, commit it.
 
 ### 1. Understand the task
 
-Read any referenced plan or PRD. Explore the codebase to understand the relevant files, patterns, and conventions. If the task is ambiguous, ask the user to clarify scope before proceeding.
+Read any referenced plan or PRD. Use a subagent to explore the codebase and understand the relevant files, patterns, and conventions. If the task is ambiguous, ask the user to clarify scope before proceeding.
 
 ### 2. Plan the implementation (optional)
 
@@ -19,7 +19,15 @@ If the task has not already been planned, create a plan for it.
 
 ### 3. Implement
 
-Work through the plan step by step.
+Use red/green/refactor, one test at a time in a tracer-bullet style.
+
+1. Write a single failing test for the smallest vertical slice of behavior
+2. Run the test — confirm it fails (red)
+3. Write the minimum code to make it pass (green)
+4. Repeat from step 1 for the next slice of behavior
+5. Refactor if needed while keeping tests green
+
+Each test should target one thin vertical slice through the system. Do not write all tests upfront — write one, make it pass, then move to the next.
 
 ### 4. Validate
 
