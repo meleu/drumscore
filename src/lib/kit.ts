@@ -13,7 +13,7 @@
  * model rather than the other way round.
  */
 
-import type { Notehead, PartId } from './notation/model';
+import type { NoteheadGlyph, PartId } from './notation/model';
 
 /** One global list; which of these a drum admits is the `variations` column (ADR-0013). */
 export type Variation = 'accent' | 'ghost' | 'flam' | 'drag';
@@ -73,8 +73,8 @@ interface KitRow {
   label: string;
   /** Which of the staff's two rhythms this drum is written into. */
   part: PartId;
-  /** Glyph, and the line or space it sits on. */
-  notehead: Notehead;
+  /** Glyph, and the line or space it sits on. How a hit is struck is not the Kit's to say. */
+  notehead: NoteheadGlyph;
   /** Accepted variations, in menu order. Empty = struck one way only. */
   variations: readonly Variation[];
 }

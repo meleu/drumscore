@@ -3,6 +3,7 @@ import {
   setHit,
   toggle,
   type GridDimensions,
+  type Hit,
   type Pattern,
   type VoiceId,
 } from '$lib/pattern';
@@ -22,10 +23,13 @@ import {
 
 export interface Fixture {
   name: string;
-  /** The plain hits. A step listed here and in `accents` is drawn accented. */
+  /** The plain hits. A step listed here and in `variations` is drawn with its variation. */
   hits: Partial<Record<VoiceId, number[]>>;
-  /** The accented hits, which need no entry in `hits`: an accent is placed in one go. */
-  accents?: Partial<Record<VoiceId, number[]>>;
+  /**
+   * Struck some other way — voice, step, variation. Needs no entry in `hits`: a variation
+   * is placed in one go, whether or not the cell was already struck.
+   */
+  variations?: [VoiceId, number, Hit][];
   /**
    * The grid to draw this one on; the default grid when it says nothing. A whole record
    * rather than a partial merged over the default, because one fixture names it and a merge
@@ -57,14 +61,26 @@ export const FIXTURES: readonly Fixture[] = [
   },
   // An accent above the stem, and a plain stroke of the same value beside it to read it
   // against. Two bars, so the second says the mark does not leak into the measures after it.
-  { name: 'accented-hand', hits: { snare: [12] }, accents: { snare: [4] } },
+  { name: 'accented-hand', hits: { snare: [12] }, variations: [['snare', 4, 'accent']] },
   // The same, in the part written stems down: the mark belongs under the staff there, clear
   // of the hands sharing it.
-  { name: 'accented-foot', hits: { kick: [8] }, accents: { kick: [0] } },
+  { name: 'accented-foot', hits: { kick: [8] }, variations: [['kick', 0, 'accent']] },
   // What ADR-0014 is about: the accented snare and the plain hi-hat share a stem, so the
   // chord draws one accent. This baseline is what pins that, and it is the common case
   // rather than an edge one.
-  { name: 'accented-chord', hits: { closedHiHat: [0, 4, 8, 12] }, accents: { snare: [0] } },
+  {
+    name: 'accented-chord',
+    hits: { closedHiHat: [0, 4, 8, 12] },
+    variations: [['snare', 0, 'accent']],
+  },
+  // The ghost's counterpart to `accented-chord`, and the opposite answer: the parentheses go
+  // round the snare alone, while the hi-hat sharing its stem stays bare. The plain snare on
+  // the backbeat is there to read the ghosted one against.
+  {
+    name: 'ghosted-chord',
+    hits: { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4] },
+    variations: [['snare', 10, 'ghost']],
+  },
   {
     // One bar of 7/8 at sixteenth resolution: fourteen steps, the beat an eighth rather than
     // the quarter every other fixture assumes. An odd number of beats is what makes the
@@ -91,9 +107,8 @@ export function patternFor(fixture: Fixture): Pattern {
     createPattern(fixture.dimensions),
   );
 
-  return Object.entries(fixture.accents ?? {}).reduce<Pattern>(
-    (pattern, [voice, steps]) =>
-      steps.reduce((current, step) => setHit(current, voice as VoiceId, step, 'accent'), pattern),
+  return (fixture.variations ?? []).reduce<Pattern>(
+    (pattern, [voice, step, hit]) => setHit(pattern, voice, step, hit),
     struck,
   );
 }

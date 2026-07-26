@@ -92,7 +92,9 @@ _Avoid_: duration, note length, hold, sustain
 
 **Notehead**:
 The glyph for one drum within a note — a cross for cymbals and hi-hats, an ordinary
-notehead for the snare and kick. A note may carry several.
+notehead for the snare and kick. A note may carry several. Ghosting belongs here rather
+than on the note, because the parentheses are drawn round one drum: a ghosted snare under
+a plain hi-hat leaves the hi-hat bare.
 _Avoid_: note (a note is the whole stroke), glyph, head, dot
 
 **Staff position**:

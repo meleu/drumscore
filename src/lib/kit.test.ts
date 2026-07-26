@@ -84,6 +84,13 @@ describe('the variations each voice accepts', () => {
     }
   });
 
+  /** The menu is a projection of the row, so this is also what the menus offer. */
+  it('lets the snare alone be ghosted', () => {
+    const ghosting = KIT.filter(({ id }) => accepts(id, 'ghost'));
+
+    expect(ghosting.map(({ id }) => id)).toEqual(['snare']);
+  });
+
   it('gives the snare every variation and the crash none', () => {
     expect(accepts('snare', 'drag')).toBe(true);
     expect(accepts('crash', 'accent')).toBe(false);

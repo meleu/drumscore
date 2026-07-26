@@ -1,5 +1,5 @@
 import { KIT, type KitVoice } from '$lib/kit';
-import { hitAt, isHit, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
+import { hitAt, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
 import {
   VALUES_PER_WHOLE,
   type BeamGroup,
@@ -196,16 +196,22 @@ function heightOf({ step, octave }: StaffPosition): number {
 /**
  * The chord struck at one step, low to high. Drums sharing a position and notehead — the
  * two hi-hats, which v1 tells apart only by ring — collapse into one head rather than
- * stacking two identical glyphs on the same line.
+ * stacking two identical glyphs on the same line; one pair of parentheses covers both,
+ * since one glyph is all the reader sees.
+ *
+ * Ghosting rides on the head rather than on the note: it is drawn round that drum alone.
  */
 function noteheadsAt(pattern: Pattern, voices: readonly KitVoice[], at: number): Notehead[] {
-  const struck = voices.filter((voice) => isHit(pattern, voice.id, at));
-  const heads = new Map(
-    struck.map(({ notehead: head }) => [
-      `${head.style}:${head.position.step}${head.position.octave}`,
-      head,
-    ]),
-  );
+  const heads = new Map<string, Notehead>();
+
+  for (const { id, notehead: glyph } of voices) {
+    const hit = hitAt(pattern, id, at);
+    if (hit === 'off') continue;
+
+    const key = `${glyph.style}:${glyph.position.step}${glyph.position.octave}`;
+    const ghosted = heads.get(key)?.ghosted || hit === 'ghost';
+    heads.set(key, { ...glyph, ghosted });
+  }
 
   return [...heads.values()].sort((a, b) => heightOf(a.position) - heightOf(b.position));
 }

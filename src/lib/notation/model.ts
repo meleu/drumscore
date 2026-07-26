@@ -36,9 +36,19 @@ export interface StaffPosition {
 /** Cymbals and hi-hats are written with a cross; drums with an ordinary notehead. */
 export type NoteheadStyle = 'normal' | 'cross';
 
-export interface Notehead {
+/** The glyph and the line it sits on: what is true of a drum before anyone strikes it. */
+export interface NoteheadGlyph {
   style: NoteheadStyle;
   position: StaffPosition;
+}
+
+export interface Notehead extends NoteheadGlyph {
+  /**
+   * Parenthesised. On the head rather than on the note, because that is what the
+   * parentheses are drawn round: a ghosted snare under a plain hi-hat leaves the hi-hat
+   * bare, and two ghosted drums draw two pairs.
+   */
+  ghosted: boolean;
 }
 
 export interface NotationNote {

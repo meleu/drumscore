@@ -56,6 +56,7 @@
         type="button"
         class="cell"
         class:on={hit !== 'off'}
+        class:ghost={hit === 'ghost'}
         class:beat={step % stepsPerBeat === 0}
         class:bar={step % barLength === 0}
         class:playing={step === currentStep}
@@ -67,11 +68,14 @@
         onkeydown={(event) => event.key === 'ArrowDown' && openMenu(event, voice, step)}
       >
         <!--
-          The staff's own symbol, so grid and sheet teach each other. Shape not shade, so
-          it survives at a cell's size and without colour; the aria-label carries it to a
-          screen reader.
+          The struck cell's block, and inside it the accent's own symbol — the staff's, so
+          grid and sheet teach each other. Shape not shade throughout: the block shrinks for
+          a ghost and the mark is a glyph, so both survive at a cell's size and without
+          colour. The aria-label carries the variation to a screen reader.
         -->
-        {#if hit === 'accent'}<span class="mark" aria-hidden="true">&gt;</span>{/if}
+        {#if hit !== 'off'}
+          <span class="fill" aria-hidden="true">{hit === 'accent' ? '>' : ''}</span>
+        {/if}
       </button>
     {/each}
   {/each}
@@ -130,15 +134,38 @@
 
   .cell.on {
     border-color: var(--color-accent);
-    background: var(--color-accent);
   }
 
-  /* Knocked out of the filled cell, so it reads at any of the theme's colours. */
-  .mark {
+  /*
+   * The block that fills a struck cell. Its own element rather than the cell's background,
+   * so how hard the cell was struck is a matter of how much of the cell it covers — and the
+   * playhead's wash stays on the cell, under it.
+   *
+   * The `>` is knocked out of it, so the mark reads at any of the theme's colours.
+   */
+  .fill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--color-accent);
     color: var(--color-surface);
     font-size: 0.8125rem;
     font-weight: 700;
     line-height: 1;
+  }
+
+  /*
+   * A ghost is the same stroke played quietly, and its cell is filled quietly: the block
+   * pulls back off the edges and pales. Smaller as well as paler, so it reads in greyscale
+   * at a cell's size, and looks nothing like the accent's `>`.
+   */
+  .cell.ghost .fill {
+    width: 45%;
+    height: 45%;
+    background: color-mix(in srgb, var(--color-accent) 55%, var(--color-surface));
   }
 
   /* Playhead: a soft wash over the whole column, cells and count label. */
@@ -146,8 +173,12 @@
     background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface));
   }
 
-  .cell.on.playing {
+  .cell.playing .fill {
     background: color-mix(in srgb, var(--color-accent) 78%, white);
+  }
+
+  .cell.ghost.playing .fill {
+    background: color-mix(in srgb, var(--color-accent) 55%, white);
   }
 
   .count.playing {

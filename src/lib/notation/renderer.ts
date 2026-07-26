@@ -6,6 +6,7 @@ import {
   Dot,
   Formatter,
   Modifier,
+  Parenthesis,
   Renderer,
   Stave,
   StaveNote,
@@ -92,6 +93,15 @@ function toStaveNote(event: NotationEvent, stemDirection: StemDirection): StaveN
   if (dots > 0) Dot.buildAndAttach([note], { all: true });
   if (!isRest && event.accented) {
     note.addModifier(new Articulation(ACCENT).setPosition(ACCENT_POSITIONS[stemDirection]));
+  }
+  if (!isRest) {
+    // Per head, by index — `Parenthesis.buildAndAttach` would bracket the whole chord, and
+    // which heads are ghosted is the engine's answer, not the chord's.
+    event.noteheads.forEach((head, index) => {
+      if (!head.ghosted) return;
+      note.addModifier(new Parenthesis(Modifier.Position.LEFT), index);
+      note.addModifier(new Parenthesis(Modifier.Position.RIGHT), index);
+    });
   }
 
   return note;

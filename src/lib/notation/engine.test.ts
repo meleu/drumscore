@@ -32,6 +32,14 @@ function patternWith(hits: Partial<Record<VoiceId, number[]>>): Pattern {
   );
 }
 
+/** Strike named ways over a pattern already carrying plain hits. */
+function struck(hits: Partial<Record<VoiceId, number[]>>, marks: [VoiceId, number, Hit][]) {
+  return marks.reduce(
+    (pattern, [voice, step, hit]) => setHit(pattern, voice, step, hit),
+    patternWith(hits),
+  );
+}
+
 /** How long each value lasts on the default 16th-note grid. */
 const STEPS: Record<NoteValue, number> = {
   whole: 16,
@@ -83,12 +91,32 @@ function rhythmOf(pattern: Pattern, id: PartId): string[] {
   return toNotation(pattern).measures.map((measure) => rhythm(partOf(measure, id).events));
 }
 
-const KICK: Notehead = { style: 'normal', position: { step: 'f', octave: 4 } };
-const SNARE: Notehead = { style: 'normal', position: { step: 'c', octave: 5 } };
-const CLOSED_HI_HAT: Notehead = { style: 'cross', position: { step: 'g', octave: 5 } };
-const OPEN_HI_HAT: Notehead = { style: 'cross', position: { step: 'g', octave: 5 } };
-const CRASH: Notehead = { style: 'cross', position: { step: 'a', octave: 5 } };
-const RIDE: Notehead = { style: 'cross', position: { step: 'f', octave: 5 } };
+/** Every part's rhythm and beaming: what a variation must leave untouched. */
+function rhythmsOf(model: NotationModel): unknown[] {
+  return model.measures.map(({ parts }) =>
+    parts.map(({ events, beams }) => [rhythm(events), beams.map((group) => group.steps)]),
+  );
+}
+
+const KICK: Notehead = { style: 'normal', position: { step: 'f', octave: 4 }, ghosted: false };
+const SNARE: Notehead = { style: 'normal', position: { step: 'c', octave: 5 }, ghosted: false };
+const CLOSED_HI_HAT: Notehead = {
+  style: 'cross',
+  position: { step: 'g', octave: 5 },
+  ghosted: false,
+};
+const OPEN_HI_HAT: Notehead = {
+  style: 'cross',
+  position: { step: 'g', octave: 5 },
+  ghosted: false,
+};
+const CRASH: Notehead = { style: 'cross', position: { step: 'a', octave: 5 }, ghosted: false };
+const RIDE: Notehead = { style: 'cross', position: { step: 'f', octave: 5 }, ghosted: false };
+
+/** The same drum, struck quietly: what the staff wraps in parentheses. */
+function ghost(head: Notehead): Notehead {
+  return { ...head, ghosted: true };
+}
 
 /** The noteheads of the first note in a part's first measure. */
 function firstChord(pattern: Pattern, id: PartId): Notehead[] {
@@ -305,14 +333,6 @@ describe('parts', () => {
  * the drums under one stem and the staff says nothing about which was meant (ADR-0014).
  */
 describe('accents', () => {
-  /** Strike named ways over a pattern already carrying plain hits. */
-  function struck(hits: Partial<Record<VoiceId, number[]>>, marks: [VoiceId, number, Hit][]) {
-    return marks.reduce(
-      (pattern, [voice, step, hit]) => setHit(pattern, voice, step, hit),
-      patternWith(hits),
-    );
-  }
-
   /** Which steps of a part's first measure are written with an accent. */
   function accentedSteps(pattern: Pattern, id: PartId): number[] {
     return partOf(measureOf(pattern), id)
@@ -390,12 +410,51 @@ describe('accents', () => {
       ]),
     );
 
-    const rhythms = (model: NotationModel) =>
-      model.measures.map(({ parts }) =>
-        parts.map(({ events, beams }) => [rhythm(events), beams.map((group) => group.steps)]),
-      );
+    expect(rhythmsOf(accented)).toEqual(rhythmsOf(plain));
+  });
+});
 
-    expect(rhythms(accented)).toEqual(rhythms(plain));
+/**
+ * Which noteheads are parenthesised. Ghosting is the opposite case to the accent: the
+ * parentheses go round one head, so drums sharing a stem each keep their own answer.
+ */
+describe('ghost notes', () => {
+  it('parenthesises the ghosted drum and leaves the rest of the chord alone', () => {
+    const pattern = struck({ snare: [0], closedHiHat: [0] }, [['snare', 0, 'ghost']]);
+
+    expect(firstChord(pattern, 'hands')).toEqual([ghost(SNARE), CLOSED_HI_HAT]);
+  });
+
+  /**
+   * Written past the setter, which would refuse: the snare is the only drum whose row
+   * accepts a ghost today. What the engine answers must be a property of the chord rather
+   * than of that fact, so the day a second drum takes one, this already says what happens.
+   */
+  it('parenthesises each ghosted drum of a chord separately', () => {
+    const plain = struck({ snare: [0], ride: [0] }, [['snare', 0, 'ghost']]);
+    const pattern: Pattern = {
+      ...plain,
+      rows: {
+        ...plain.rows,
+        ride: plain.rows.ride.map((hit, step) => (step === 0 ? 'ghost' : hit)),
+      },
+    };
+
+    expect(firstChord(pattern, 'hands')).toEqual([ghost(SNARE), ghost(RIDE)]);
+  });
+
+  /** A ghost says how a stroke is played, never how long it is. */
+  it('leaves the rhythm, the rests, the dots and the beams exactly as they were', () => {
+    const hits = { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4, 7, 12], kick: [0, 8] };
+    const plain = toNotation(patternWith(hits));
+    const ghosted = toNotation(
+      struck(hits, [
+        ['snare', 7, 'ghost'],
+        ['snare', 12, 'ghost'],
+      ]),
+    );
+
+    expect(rhythmsOf(ghosted)).toEqual(rhythmsOf(plain));
   });
 });
 
