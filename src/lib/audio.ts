@@ -1,12 +1,10 @@
 /**
- * Audio engine: a thin adapter over Tone.js. It holds no musical logic — it maps the
+ * Audio engine: a thin adapter over Tone.js, holding no musical logic — it maps the
  * Pattern's on-cells onto synthesized voices and drives Tone's Transport.
  *
- * Each voice is its own synth so simultaneous hits sound together rather than stealing
- * one monophonic voice. The step grid is scheduled as a looping `Sequence`; its callback
- * reads the *current* pattern, so edits (including tempo) are reflected live and the loop
- * repeats seamlessly. Voice count/character and the synth choices come from the PRD:
- * MembraneSynth kick, NoiseSynth snare/hi-hats, MetalSynth cymbals/ride.
+ * One synth per voice, so simultaneous hits sound together instead of stealing a
+ * monophonic voice. The grid is a looping `Sequence` whose callback reads the *current*
+ * pattern, so edits and tempo changes land live and the loop repeats seamlessly.
  */
 
 import {
@@ -24,16 +22,13 @@ import { KIT, type VoiceId } from './kit';
 import { isHit, totalSteps, type Pattern } from './pattern';
 import type { Playback } from './sketchpad.svelte';
 
-/** Notified of the playing column as the loop advances; `null` when playback stops. */
+/** Notified of the playing column; `null` when playback stops. */
 export type StepListener = (step: number | null) => void;
 
 /**
- * One trigger fn per voice, plus a disposer for every Tone node it created.
- *
- * The map is an exhaustive record over the Kit's voices, deliberately: a drum added to the
- * Kit with no synth here is a compile error rather than a drum that is drawable and
- * silent. What makes it sound stays on this side of the seam — no envelope, filter or
- * volume belongs in a kit row.
+ * One trigger per voice plus a disposer for every Tone node created. Exhaustive over the
+ * Kit deliberately: a new drum with no synth here is a compile error, not a silent drum.
+ * Envelopes, filters and volumes stay this side of the seam.
  */
 interface VoiceKit {
   triggers: Record<VoiceId, (time: number) => void>;
@@ -64,7 +59,7 @@ function buildVoices(): VoiceKit {
     }),
   ).connect(destination);
 
-  // Hi-hats are white noise pushed through a highpass so they read as metal, not snare.
+  // Highpassed white noise, so the hats read as metal rather than snare.
   const hiHatFilter = track(new Filter(7000, 'highpass')).connect(destination);
   const closedHiHat = track(
     new NoiseSynth({ volume: -12, envelope: { attack: 0.001, decay: 0.04, sustain: 0 } }),
@@ -122,15 +117,12 @@ export class AudioEngine implements Playback {
     getTransport().bpm.value = pattern.bpm;
   }
 
-  /** Register (or clear, with `null`) the playhead listener for the playing column. */
+  /** Register, or clear with `null`, the playhead listener. */
   onStep(listener: StepListener | null): void {
     this.stepListener = listener;
   }
 
-  /**
-   * Point the engine at the latest pattern. The sequence callback reads it on every
-   * step, so cell edits need no rebuild; only a change in grid size rebuilds the loop.
-   */
+  /** Cell edits need no rebuild — the callback reads the pattern. Only a resize does. */
   setPattern(pattern: Pattern): void {
     this.pattern = pattern;
     if (totalSteps(pattern.dimensions) !== this.stepCount) this.buildSequence();
@@ -140,7 +132,7 @@ export class AudioEngine implements Playback {
     getTransport().bpm.value = bpm;
   }
 
-  /** Resume the audio context (requires a user gesture) and start the loop from the top. */
+  /** Resume the audio context (needs a user gesture) and start from the top. */
   async play(): Promise<void> {
     await start();
     if (!this.sequence) this.buildSequence();
@@ -148,10 +140,8 @@ export class AudioEngine implements Playback {
     getTransport().start();
   }
 
-  /** Stop and rewind so the next play starts at the top of the loop. */
   stop(): void {
-    // Clear first: a draw queued just before the stop can still fire on the next
-    // animation frame, so the running guard below must already be down when it does.
+    // Guard down first: a draw queued just before the stop can still fire next frame.
     this.running = false;
     getTransport().stop();
     this.stepListener?.(null);
@@ -167,7 +157,7 @@ export class AudioEngine implements Playback {
     const { dimensions } = this.pattern;
     this.stepCount = totalSteps(dimensions);
     const steps = Array.from({ length: this.stepCount }, (_, step) => step);
-    // e.g. quarter-note beat (4) x 4 steps/beat = 16th notes → "16n".
+    // e.g. quarter beat (4) x 4 steps/beat = 16th notes -> "16n".
     const subdivision = `${dimensions.beatValue * dimensions.stepsPerBeat}n`;
 
     this.sequence = new Sequence<number>(
@@ -175,9 +165,8 @@ export class AudioEngine implements Playback {
         for (const { id } of KIT) {
           if (isHit(this.pattern, id, step)) this.voices.triggers[id](time);
         }
-        // The sequence callback fires ahead of the audible moment; Draw defers the
-        // highlight to that moment so the playhead lands in sync with the sound. The
-        // running guard drops draws that come due after a stop has cleared the highlight.
+        // The callback fires ahead of the audible moment; Draw defers the highlight to it,
+        // so the playhead lands in sync. The guard drops draws due after a stop.
         const listener = this.stepListener;
         if (listener) getDraw().schedule(() => this.running && listener(step), time);
       },

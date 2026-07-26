@@ -10,12 +10,9 @@ import {
 } from './kit';
 
 /**
- * The canonical order, written out.
- *
- * This is the pattern codec's bit layout, and the compiler cannot see that: reordering
- * the Kit would keep every type happy while silently changing what every existing share
- * link and autosave decodes to. So it is pinned here, and a reorder has to be a deliberate
- * edit to this list too.
+ * The codec's bit layout, which the compiler cannot see: a reorder keeps every type happy
+ * while silently changing what every existing share link and autosave decodes to. Pinned
+ * here, so a reorder must be a deliberate edit to this list too.
  */
 const CANONICAL_ORDER: VoiceId[] = ['kick', 'snare', 'closedHiHat', 'openHiHat', 'crash', 'ride'];
 
@@ -54,12 +51,10 @@ describe('the kit rows', () => {
 });
 
 /**
- * ADR-0013's table, written out.
- *
- * The rows are the only statement of this fact in the codebase, so this is where it is
- * checked against the decision rather than against itself. Taking a variation off a row
- * makes every share link carrying it decode to `null`, which is a deliberate act and has to
- * be a deliberate edit here too.
+ * ADR-0013's table. The Kit rows are the codebase's only statement of this, so it is
+ * checked against the decision rather than against itself. Dropping a variation makes
+ * every share link carrying it decode to `null` — a deliberate act, so a deliberate edit
+ * here too.
  */
 const ACCEPTED: Record<VoiceId, Variation[]> = {
   kick: ['accent'],

@@ -1,27 +1,17 @@
 /**
- * The pattern codec: a compact, URL-safe string form of a {@link Pattern}.
+ * Pattern codec: a compact, URL-safe string form of a {@link Pattern}, serving both the
+ * "copy link" share format and the localStorage autosave.
  *
- * The pattern state is tiny — a handful of grid dimensions, one BPM, and
- * `voices x steps` cells of half a byte each — so it round-trips comfortably inside a URL. That
- * makes a single encoding serve two jobs: the "copy link" share format and the
- * localStorage autosave format.
- *
- * The module is pure: no DOM, no `Buffer`, no `btoa`/`atob`. Base64url is
- * implemented over `Uint8Array` so the same code runs in the browser and in the
- * Node test environment. Decoding is deliberately tolerant — any malformed or
- * absent input yields `null` rather than throwing, so callers can fall back to the
- * next source (autosave, then the seed).
+ * Pure: no DOM, no `Buffer`, no `btoa`/`atob` — base64url over `Uint8Array` runs the same
+ * in the browser and in Node. Decoding is tolerant: malformed or absent input yields
+ * `null` rather than throwing, so callers fall back to the next source.
  */
 
 /**
- * The Kit, named at the import because this format is built out of three of its properties:
- * rows are encoded in canonical order, the payload is `voices x steps` cells wide, and which
- * cells are real is the Kit's answer rather than the format's.
- *
- * Adding or removing a voice therefore changes the payload width, which breaks every
- * string the old kit encoded — share links and autosaves alike. That breakage is accepted:
- * the kit is expected to grow, and no migration path is built. The format version below is
- * not what rescues those strings, and bumping it would not.
+ * The format is built out of three Kit properties: canonical row order, a `voices x steps`
+ * payload, and which cells are real. So adding or removing a voice breaks every existing
+ * share link and autosave. Accepted: the kit is expected to grow, no migration path is
+ * built, and bumping the version below would not rescue those strings.
  */
 import { accepts, KIT, type Hit, type VoiceId } from './kit';
 import {
@@ -35,11 +25,10 @@ import {
 } from './pattern';
 
 /**
- * Bumped only on a breaking change to the byte layout; old strings then decode to `null`.
- *
- * Version 2 widened a cell from a bit to a nibble to carry the variation. No reader for
- * version 1 is written: those strings fall back to the autosave and then to the seed, and a
- * reader bought today would not survive the next voice the kit gains anyway.
+ * Bumped only on a breaking byte-layout change; old strings then decode to `null`. Version
+ * 2 widened a cell from a bit to a nibble to carry the variation. No version 1 reader:
+ * those strings fall back to autosave then seed, and one bought today would not survive
+ * the next voice the kit gains.
  */
 const FORMAT_VERSION = 2;
 
@@ -47,14 +36,10 @@ const FORMAT_VERSION = 2;
 const HEADER_LENGTH = 6;
 
 /**
- * A cell on the wire: one nibble, two to a byte, so nothing straddles a byte boundary.
- *
- * Sixteen codes for six states is deliberate headroom — the cymbal choke is already named
- * (ADR-0013) and lands without touching the layout. The numbers are the format, so changing
- * one silently rewrites the meaning of every string ever shared; `codec.test.ts` pins them.
- *
- * A record rather than a list, so a `Hit` added to the union without a code here is a
- * compile error rather than a cell that encodes as something else.
+ * A cell on the wire: one nibble, two to a byte, so nothing straddles a boundary. Sixteen
+ * codes for six states is deliberate headroom (the cymbal choke lands without touching the
+ * layout). These numbers *are* the format; `codec.test.ts` pins them. A record, so a new
+ * `Hit` without a code here is a compile error rather than a mis-encoded cell.
  */
 const CELL_CODES: Record<Hit, number> = {
   off: 0,
@@ -65,12 +50,12 @@ const CELL_CODES: Record<Hit, number> = {
   drag: 5,
 };
 
-/** The same table read the other way. Codes with no entry are not cells, and reject. */
+/** The same table backwards. Codes with no entry are not cells, and reject. */
 const HITS_BY_CODE: ReadonlyMap<number, Hit> = new Map(
   Object.entries(CELL_CODES).map(([hit, code]) => [code, hit as Hit]),
 );
 
-/** Two cells to a byte: the even one in the high nibble, so a dump reads left to right. */
+/** Even cell in the high nibble, so a dump reads left to right. */
 const CELLS_PER_BYTE = 2;
 
 function cellBytesFor(steps: number): number {
@@ -79,7 +64,6 @@ function cellBytesFor(steps: number): number {
 
 const BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
-/** Encode a pattern to a compact URL-safe string. */
 export function encode(pattern: Pattern): string {
   const { dimensions, bpm, rows } = pattern;
   const steps = totalSteps(dimensions);
@@ -108,9 +92,8 @@ export function encode(pattern: Pattern): string {
 }
 
 /**
- * Decode a string produced by {@link encode} back into a pattern. Returns `null`
- * for absent, malformed, wrong-version, or truncated input so the caller can fall
- * back cleanly.
+ * Inverse of {@link encode}. `null` for absent, malformed, wrong-version or truncated
+ * input, so the caller can fall back cleanly.
  */
 export function decode(encoded: string | null | undefined): Pattern | null {
   if (!encoded) return null;
@@ -125,10 +108,9 @@ export function decode(encoded: string | null | undefined): Pattern | null {
     beatValue: bytes[3] ?? 0,
     bars: bytes[4] ?? 0,
   };
-  // Which grids exist is the Pattern's question, not the format's. Four bytes name any of
-  // four billion grids and the app supports a vanishing fraction of them; the format's job is
-  // reading the bytes, so it asks rather than deciding, and a refusal is just another
-  // malformed input.
+  // Which grids exist is the Pattern's question: four bytes name four billion grids and
+  // the app supports a vanishing fraction. The format reads bytes, so it asks; a refusal
+  // is just another malformed input.
   if (!isSupportedGrid(dimensions)) return null;
 
   const steps = totalSteps(dimensions);
@@ -147,9 +129,8 @@ export function decode(encoded: string | null | undefined): Pattern | null {
       const byte = bytes[HEADER_LENGTH + (cell >> 1)] ?? 0;
       const hit = HITS_BY_CODE.get(cell % 2 === 0 ? byte >> 4 : byte & 0x0f);
 
-      // A code nothing decodes to, or a way this drum cannot be struck, and the whole
-      // string is malformed — the same answer an unsupported grid gets. Decoding yields
-      // only patterns the app considers valid; there is no repair step (ADR-0013).
+      // Unknown code, or a way this drum cannot be struck: the whole string is malformed.
+      // Decoding yields only valid patterns; there is no repair step (ADR-0013).
       if (hit === undefined || !accepts(voice.id, hit)) return null;
       row[step] = hit;
     }
@@ -183,7 +164,7 @@ function bytesToBase64url(bytes: Uint8Array): string {
 }
 
 function base64urlToBytes(str: string): Uint8Array | null {
-  // A base64 group is 4 chars; a trailing group of length 1 is impossible.
+  // A group is 4 chars; a trailing group of 1 is impossible.
   if (str.length % 4 === 1) return null;
 
   const values: number[] = [];

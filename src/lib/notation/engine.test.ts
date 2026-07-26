@@ -23,7 +23,7 @@ import {
   type PartId,
 } from './model';
 
-/** Build a pattern by switching on the listed steps for each voice. */
+/** Switch on the listed steps for each voice. */
 function patternWith(hits: Partial<Record<VoiceId, number[]>>): Pattern {
   return Object.entries(hits).reduce<Pattern>(
     (pattern, [voice, steps]) =>
@@ -50,10 +50,9 @@ const CODES: Record<NoteValue, string> = {
 };
 
 /**
- * Spell a measure out as a rhythm: `'rq q 8'` is a quarter rest, then a quarter note, then
- * an eighth — an `r` prefix marks a rest and a trailing `.` an augmentation dot, so `8.` is
- * a dotted eighth. Reading the events back this way keeps the expectations below short
- * enough to check against the bar you have in your head.
+ * A measure as a rhythm string: `'rq q 8'` is quarter rest, quarter note, eighth. `r`
+ * prefix = rest, trailing `.` = dot, so `8.` is a dotted eighth. Keeps the expectations
+ * below short enough to check against the bar in your head.
  */
 function rhythm(events: NotationEvent[]): string {
   return events
@@ -249,7 +248,7 @@ describe('toNotation', () => {
 
     for (const { parts } of toNotation(pattern).measures) {
       for (const { events } of parts) {
-        // A dot adds half again, so a dotted value covers 1.5x its plain step count.
+        // A dot adds half again: 1.5x the plain step count.
         const lengths = events.map((event) => STEPS[event.value] * (2 - 2 ** -event.dots));
         const total = lengths.reduce((sum, steps) => sum + steps, 0);
 
@@ -301,14 +300,12 @@ describe('parts', () => {
 });
 
 /**
- * Which notes carry an accent mark, asserted as plain data.
- *
- * The interesting cases are all chords, because the snare shares the hands part with every
- * cymbal: the mark has one place to go, so the engine ORs the accent across the drums under
- * one stem and the staff says nothing about which of them was meant (ADR-0014).
+ * Which notes carry an accent mark. The interesting cases are chords: the snare shares the
+ * hands part with every cymbal, the mark has one place to go, so the engine ORs it across
+ * the drums under one stem and the staff says nothing about which was meant (ADR-0014).
  */
 describe('accents', () => {
-  /** Strike some cells a named way over a pattern already carrying plain hits. */
+  /** Strike named ways over a pattern already carrying plain hits. */
   function struck(hits: Partial<Record<VoiceId, number[]>>, marks: [VoiceId, number, Hit][]) {
     return marks.reduce(
       (pattern, [voice, step, hit]) => setHit(pattern, voice, step, hit),
@@ -344,7 +341,7 @@ describe('accents', () => {
     const pattern = struck({ snare: [0], closedHiHat: [0] }, [['snare', 0, 'accent']]);
     const note = partOf(measureOf(pattern), 'hands').events[0];
 
-    // One note, both heads, one mark: the hi-hat is drawn accented because it shares the stem.
+    // One note, both heads, one mark: the hi-hat draws accented because it shares the stem.
     expect(note).toMatchObject({ kind: 'note', noteheads: [SNARE, CLOSED_HI_HAT], accented: true });
   });
 
@@ -417,9 +414,8 @@ describe('noteheads', () => {
   });
 
   /**
-   * The table above says which head each drum is written with; this says which part writes
-   * it. Together they pin what the engine used to state as two literals and now derives
-   * from the Kit — so a drum that drifted into the wrong part, or into both, fails here.
+   * The table says which head; this says which part. Together they pin what the engine now
+   * derives from the Kit, so a drum drifting into the wrong part — or both — fails here.
    */
   it.each(drums)('writes %s into no part but the %s', (voice, part) => {
     const other: PartId = part === 'hands' ? 'feet' : 'hands';
@@ -476,7 +472,7 @@ describe('beaming', () => {
   it('breaks a beam at a rest and starts a fresh one after the gap', () => {
     const pattern = patternWith({ closedHiHat: [0, 1, 2, 6, 7] });
 
-    // 0,1 are sixteenths; 2 becomes an eighth reaching the beat line; then a rest to 6.
+    // 0,1 sixteenths; 2 an eighth reaching the beat line; then a rest to 6.
     expect(beamsOf(pattern, 'hands')).toEqual([
       [0, 1, 2],
       [6, 7],
@@ -507,25 +503,21 @@ describe('beaming', () => {
 });
 
 /**
- * The claim `isSupportedGrid` makes, checked against the engine that has to honour it.
+ * `isSupportedGrid`'s claim, checked against the engine that must honour it: every grid it
+ * admits survives the engine's worst case — a hit on every step of every voice, the
+ * densest splitting and beaming there is.
  *
- * The predicate says a grid is writable when the note-value vocabulary holds a value spanning
- * exactly one step. This sweep is what makes that a testable claim rather than an argument:
- * every grid it admits must survive the worst case the engine has — a hit on every step of
- * every voice, which is the densest splitting and beaming there is.
+ * Only admitted grids are visited: the direction that reaches a user is the predicate
+ * being too permissive, and a refused grid cannot arrive.
  *
- * Only the admitted grids are visited. The direction that reaches a user is the predicate
- * being too permissive; a grid it refuses cannot arrive, so nothing is owed about it.
- *
- * This is the drift guard. When the vocabulary grows a value, this is the test that fails if
- * "some value spans exactly one step" turns out not to be enough for the grids it just let in.
+ * The drift guard. When the vocabulary grows a value, this fails if "some value spans
+ * exactly one step" turns out not to be enough for the grids it just let in.
  */
 describe('the grids the predicate admits', () => {
   /**
-   * Each dimension over 1-16, and one bar or two — a second measure is what proves the engine
-   * repeats correctly, and a third proves nothing further. Sixteen is past every meter and
-   * resolution today's vocabulary can write, so the space contains the whole answer rather
-   * than a sample of it.
+   * Each dimension over 1-16, one bar or two — a second measure proves the engine repeats,
+   * a third proves nothing further. Sixteen is past every meter and resolution today's
+   * vocabulary can write, so this space holds the whole answer, not a sample.
    */
   const RANGE = 16;
   const BARS = 2;
@@ -548,7 +540,7 @@ describe('the grids the predicate admits', () => {
 
   const admitted = everyGrid().filter(isSupportedGrid);
 
-  /** A hit on every step of every voice: the most splitting and beaming a grid can ask for. */
+  /** A hit on every step of every voice. */
   function denselyHit(dimensions: GridDimensions): Pattern {
     const pattern = createPattern(dimensions);
     const struck = new Array<Hit>(totalSteps(dimensions)).fill('plain');
@@ -559,7 +551,7 @@ describe('the grids the predicate admits', () => {
     return { ...pattern, rows };
   }
 
-  /** How many steps a value lasts on this grid — the same arithmetic the engine's tables use. */
+  /** The same arithmetic the engine's tables use. */
   function stepsOf(value: NoteValue, dimensions: GridDimensions): number {
     const entry = VALUES_PER_WHOLE.find(([candidate]) => candidate === value);
     if (!entry) throw new Error(`no such note value: ${value}`);
@@ -571,9 +563,9 @@ describe('the grids the predicate admits', () => {
     `${stepsPerBeat} steps x ${beatsPerBar}/${beatValue} x ${bars} bar(s)`;
 
   /**
-   * What goes wrong when the engine writes a dense pattern on this grid, or null if nothing
-   * does. Stronger than "does not throw": every part of every measure has to be filled
-   * exactly, each event starting where the one before it ended.
+   * What goes wrong writing a dense pattern on this grid, or null. Stronger than "does not
+   * throw": every part of every measure filled exactly, each event starting where the last
+   * ended.
    */
   function faultIn(dimensions: GridDimensions): string | null {
     let model: NotationModel;
@@ -588,7 +580,7 @@ describe('the grids the predicate admits', () => {
 
     for (const { parts } of model.measures) {
       for (const { id, events } of parts) {
-        // A dot adds half again, so a dotted value covers 1.5x its plain step count.
+        // A dot adds half again: 1.5x the plain step count.
         const lengths = events.map(
           (event) => stepsOf(event.value, dimensions) * (2 - 2 ** -event.dots),
         );
@@ -607,9 +599,8 @@ describe('the grids the predicate admits', () => {
   }
 
   it('admits every writable step-and-beat-value pair against every meter in the space', () => {
-    // Fifteen pairs of stepsPerBeat x beatValue multiply to a value the vocabulary knows,
-    // times sixteen meters, times one bar or two. Asserted as a number so that a change
-    // quietly narrowing or widening the predicate moves it rather than passing silently.
+    // 15 stepsPerBeat x beatValue pairs multiply to a known value, x16 meters, x2 bar
+    // counts. A number, so a change narrowing or widening the predicate moves it.
     expect(admitted).toHaveLength(480);
   });
 

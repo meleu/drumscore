@@ -1,17 +1,14 @@
 /**
- * The sheet: the staff as something you can take away — a self-contained SVG, a PNG
- * file, or a PNG on the clipboard. It never draws anything. The staff hands it the
- * `<svg>` VexFlow drew and everything here is made from that, so what you take away is
- * always a copy of what is on screen.
+ * The sheet: the staff as something you can take away — a self-contained SVG, a PNG file,
+ * or a PNG on the clipboard. It never draws: the staff hands it the `<svg>` VexFlow drew
+ * and everything here is made from that, so an export always matches the screen.
  *
- * A runes module rather than a plain object, for the same reason as the sketchpad: a
- * component that reads `ready` subscribes by reading it, so the buttons enable themselves
- * on the staff's first draw with no wiring in between (ADR-0007, ADR-0008).
+ * A runes module, like the sketchpad: a component reading `ready` subscribes by reading
+ * it, so the buttons enable themselves on the first draw with no wiring (ADR-0007/0008).
  *
- * The browser calls underneath are reached directly, with no port over them. A port
- * narrow enough to be worth faking would sit past the point where these methods actually
- * fail, and a port wide enough to test would take the font embedding and the
- * rasterization with it, leaving nothing here — see ADR-0008.
+ * The browser calls are reached directly, with no port over them: a port narrow enough to
+ * fake would sit past the point where these methods fail, and a wide one would take the
+ * font embedding and rasterization with it, leaving nothing here — ADR-0008.
  */
 
 import { copyPng, exportPng, exportSvg } from './export';
@@ -34,15 +31,13 @@ export interface Sheet {
 }
 
 export function createSheet({ name }: SheetDeps): Sheet {
-  // Raw because the element is only ever replaced wholesale, and a live DOM node is the
-  // last thing that should be handed to a deep proxy.
+  // Raw: replaced wholesale, and a live DOM node is the last thing to hand a deep proxy.
   let element = $state.raw<SVGSVGElement | null>(null);
 
   /**
-   * The one path everything you can take away goes down. Nothing drawn means nothing to
-   * do, and a browser that will not encode a canvas, will not hand over the clipboard or
-   * will not read back a font is a fact of this interface rather than an unhandled
-   * rejection — the reason is logged, the caller gets `false`.
+   * The one path every export goes down. A browser that will not encode a canvas, hand
+   * over the clipboard or read back a font is a fact of this interface rather than an
+   * unhandled rejection — the reason is logged, the caller gets `false`.
    */
   async function attempt(action: (svg: SVGSVGElement) => Promise<boolean>): Promise<boolean> {
     if (element === null) return false;

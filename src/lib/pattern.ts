@@ -1,29 +1,22 @@
 /**
- * The pattern model: the single source of truth for what the user has drawn.
+ * Pattern model: source of truth for what the user drew.
  *
- * Grid dimensions live in data rather than as literals so a later version can change
- * the resolution, meter, or bar count without rewriting the logic that reads them.
- * v1 ships 6 voices x 32 steps (16th notes, 4/4, two bars).
- *
- * Operations are pure: they return a new pattern rather than mutating the old one.
+ * Dimensions live in data, not literals, so resolution/meter/bars can change later.
+ * Operations are pure — they return a new pattern.
  */
 
 import { accepts, KIT, type Hit, type VoiceId } from './kit';
 import { VALUES_PER_WHOLE } from './notation/model';
 
-/**
- * Which drums there are, and which ways of striking one exist, are the Kit's business
- * rather than the Pattern's. The types are re-exported because the interfaces below are
- * stated in terms of them; anything that needs the *list* reads `kit.ts` directly.
- */
+/** Re-exported for the interfaces below; the lists live in `kit.ts`. */
 export type { Hit, VoiceId };
 
 export interface GridDimensions {
-  /** Steps per beat. 4 gives 16th-note resolution. */
+  /** 4 gives 16th-note resolution. */
   stepsPerBeat: number;
-  /** Beats per bar — the time signature's numerator. */
+  /** Time signature numerator. */
   beatsPerBar: number;
-  /** The time signature's denominator: 4 means the quarter note gets the beat. */
+  /** Time signature denominator: 4 = the quarter note gets the beat. */
   beatValue: number;
   bars: number;
 }
@@ -43,9 +36,8 @@ export interface Pattern {
   readonly dimensions: GridDimensions;
   readonly bpm: number;
   /**
-   * One row per voice, each `totalSteps(dimensions)` cells long. A cell holds how it is
-   * struck, `'off'` included, so silence needs no separate representation and a variation
-   * needs no second structure to live in.
+   * One row per voice, `totalSteps(dimensions)` cells long. A cell holds how it is struck,
+   * `'off'` included, so silence and variations need no second structure.
    */
   readonly rows: Readonly<Record<VoiceId, readonly Hit[]>>;
 }
@@ -59,48 +51,34 @@ export function totalSteps(dimensions: GridDimensions): number {
 }
 
 /**
- * The capacity guard's bounds. These are **not** a statement about what drumscore presents
- * well — the staff is one unwrapped line and the grid is one very wide row, so sizes well
- * under these will look bad long before they are refused. They are protection against a
- * grid a browser cannot lay out at all.
- *
- * Sized past the work they have to survive: 4096 steps is 256 bars of 4/4 sixteenths, about
- * twice a full-song transcription, and roughly 24k grid cells at the ceiling. Nothing
- * planned should have to raise them.
+ * Capacity guard, not a taste judgement — sizes well under these already look bad on one
+ * unwrapped staff. Stops grids a browser cannot lay out at all: 4096 steps is 256 bars of
+ * 4/4 sixteenths, ~24k grid cells, twice a full-song transcription.
  */
 const MAX_TOTAL_STEPS = 4096;
 const MAX_BARS = 256;
 const MAX_BEATS_PER_BAR = 32;
 
 /**
- * Is this a grid drumscore supports? The one answer in the codebase to that question.
- *
- * Called by the pattern codec, which is the one place an unchecked grid enters the app;
- * everything downstream — the engine, the grid, the audio engine, the renderer — trusts its
- * input because of this.
+ * The one answer to "is this grid supported?". Called by the codec, the only door an
+ * unchecked grid enters by; engine, grid, audio and renderer trust their input because
+ * of this.
  */
 export function isSupportedGrid(dimensions: GridDimensions): boolean {
-  // Integrality and a floor of one. The codec feeds this raw bytes, where zero is reachable
-  // and a grid with a zero in it has no steps to draw.
+  // Integral, min 1: the codec feeds raw bytes, and a zero leaves nothing to draw.
   if (!Object.values(dimensions).every((value) => Number.isInteger(value) && value >= 1)) {
     return false;
   }
 
-  // Writability. Some note value must span exactly one step, or a hit on an off-step has
-  // nothing that can express it and the engine has no way to write the pattern.
-  //
-  // This asks the staff's vocabulary rather than restating what it can write, so the answer
-  // follows the vocabulary rather than drifting from it: the day `VALUES_PER_WHOLE` gains a
-  // 32nd, 32nd-resolution grids become supported here with no edit; the day it gains tuplet
-  // values, triplet resolutions do. There is deliberately no power-of-two test and no list
-  // of allowed numbers — both would be a second, staler copy of the same fact.
+  // Writability: some note value must span exactly one step, or a hit on an off-step has
+  // nothing to express it. Asks the staff's vocabulary rather than restating it, so adding
+  // a 32nd (or tuplets) to `VALUES_PER_WHOLE` widens this with no edit here. Deliberately
+  // no power-of-two test and no allow-list — both would be a staler copy of the same fact.
   const stepsPerWhole = dimensions.stepsPerBeat * dimensions.beatValue;
   if (!VALUES_PER_WHOLE.some(([, perWhole]) => perWhole === stepsPerWhole)) return false;
 
-  // Capacity — the guard, not a product statement. See the bounds above.
-  //
-  // Beats per bar is bounded separately because the other two do not imply it: one bar of
-  // sixty beats at one step each is a tiny grid and an absurd meter.
+  // Beats per bar is bounded separately: one bar of sixty one-step beats is a tiny grid
+  // and an absurd meter.
   if (totalSteps(dimensions) > MAX_TOTAL_STEPS) return false;
   if (dimensions.bars > MAX_BARS) return false;
   if (dimensions.beatsPerBar > MAX_BEATS_PER_BAR) return false;
@@ -120,20 +98,17 @@ export function createPattern(
   return { dimensions, bpm, rows };
 }
 
-/** How this cell is struck. A step outside the grid is silent, like an empty one. */
+/** How this cell is struck; a step outside the grid reads as silent. */
 export function hitAt(pattern: Pattern, voice: VoiceId, step: number): Hit {
   return pattern.rows[voice][step] ?? 'off';
 }
 
-/** Is this cell struck at all? The question everything that ignores the variation asks. */
+/** Struck at all — what everything that ignores the variation asks. */
 export function isHit(pattern: Pattern, voice: VoiceId, step: number): boolean {
   return hitAt(pattern, voice, step) !== 'off';
 }
 
-/**
- * Set the tempo, clamped to the supported range. Non-finite input (e.g. a cleared
- * number field) leaves the pattern untouched.
- */
+/** Clamped to range. Non-finite (e.g. a cleared number field) changes nothing. */
 export function setBpm(pattern: Pattern, bpm: number): Pattern {
   if (!Number.isFinite(bpm)) return pattern;
   const clamped = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)));
@@ -144,10 +119,9 @@ export function setBpm(pattern: Pattern, bpm: number): Pattern {
 /**
  * Strike one cell this way, or silence it with `'off'`.
  *
- * Refuses, by handing back the pattern it was given, a step outside the grid and a
- * variation the drum does not accept — one refusal, one shape, so the sketchpad's
- * identity-means-no-change rule covers both (ADR-0013). Setting what the cell already
- * holds is a refusal too, for the same reason.
+ * Refuses by handing back the same pattern — out-of-grid step, unaccepted variation, or
+ * setting what the cell already holds — so the sketchpad's identity-means-no-change rule
+ * covers all three (ADR-0013).
  */
 export function setHit(pattern: Pattern, voice: VoiceId, step: number, hit: Hit): Pattern {
   const row = pattern.rows[voice];
@@ -162,27 +136,22 @@ export function setHit(pattern: Pattern, voice: VoiceId, step: number, hit: Hit)
 }
 
 /**
- * Flip one cell between silent and an ordinary stroke — what a left-click does.
- *
- * Two states, whatever the cell holds: a struck cell of any kind clears. A cell holds one
- * value with no history behind it, so there is nothing for a click on a flam to demote to
- * except a plain hit, and that would make one gesture mean two things (ADR-0012).
+ * Left-click: flip between silent and plain. Two states whatever the cell holds — a cell
+ * has no history to demote a flam to, and one gesture must not mean two things (ADR-0012).
  */
 export function toggle(pattern: Pattern, voice: VoiceId, step: number): Pattern {
   return setHit(pattern, voice, step, isHit(pattern, voice, step) ? 'off' : 'plain');
 }
 
-/** Empty every cell, preserving dimensions and tempo. */
+/** Empty every cell; dimensions and tempo survive. */
 export function clear(pattern: Pattern): Pattern {
   return createPattern(pattern.dimensions, pattern.bpm);
 }
 
 /**
- * The default beat a fresh visitor lands on: a basic rock groove — closed hi-hat on
- * every 8th, kick on beats 1 & 3, snare on beats 2 & 4 — laid out from the grid
- * dimensions rather than hard-coded step numbers so it survives a resolution change.
- *
- * Plain hits throughout. What the seed teaches is the grid, not the variations.
+ * The default beat: closed hi-hat on every 8th, kick on 1 & 3, snare on 2 & 4. Derived
+ * from the dimensions rather than hard-coded steps, so it survives a resolution change.
+ * Plain hits only — the seed teaches the grid, not the variations.
  */
 export function seed(
   dimensions: GridDimensions = DEFAULT_DIMENSIONS,
@@ -197,7 +166,7 @@ export function seed(
     closedHiHat: [...pattern.rows.closedHiHat],
   };
 
-  // A hi-hat every eighth note: one hit every half-beat's worth of steps.
+  // Every 8th: one hit per half-beat's worth of steps.
   const hiHatEvery = Math.max(1, Math.round(stepsPerBeat / 2));
   for (let step = 0; step < rows.closedHiHat.length; step += hiHatEvery) {
     rows.closedHiHat[step] = 'plain';
@@ -206,7 +175,6 @@ export function seed(
   for (let bar = 0; bar < bars; bar++) {
     for (let beat = 0; beat < beatsPerBar; beat++) {
       const step = (bar * beatsPerBar + beat) * stepsPerBeat;
-      // Beats 1 & 3 (even index) get the kick; beats 2 & 4 (odd index) get the snare.
       if (beat % 2 === 0) rows.kick[step] = 'plain';
       else rows.snare[step] = 'plain';
     }

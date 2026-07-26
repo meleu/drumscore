@@ -1,11 +1,8 @@
-/*
- * Theme tokens. Light is the default; dark applies when the OS asks for it.
- * Components should only ever reference these variables, never raw colors.
- */
+/* Theme tokens. Components reference these only, never raw colors. */
 :root {
   color-scheme: light dark;
 
-  /* Light theme (default) */
+  /* light (default) */
   --color-bg: #fbfbfc;
   --color-surface: #ffffff;
   --color-border: #d6d6de;
@@ -13,14 +10,10 @@
   --color-text-muted: #62626e;
   --color-accent: #e14f16;
 
-  /*
-   * The staff is a VexFlow SVG and is deliberately theme-independent: notation
-   * reads black-on-white, and SVG/PNG export must look the same either way.
-   */
+  /* The staff is theme-independent: notation reads black-on-white, and exports must match. */
   --color-paper: #ffffff;
   --color-ink: #16161a;
 
-  /* Desktop-first, but the layout should not break on narrower screens. */
   font-family:
     system-ui,
     -apple-system,

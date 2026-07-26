@@ -9,18 +9,16 @@
   import { createSheet } from '$lib/sheet/sheet.svelte';
   import { createSketchpad } from '$lib/sketchpad.svelte';
 
-  // Every state transition lives behind this seam — the app below only draws what the
-  // sketchpad holds and calls back into it. Sound and storage are handed in, so nothing
-  // here decides how a pattern is remembered or played.
+  // Every state transition lives behind this seam; the app below only draws what the
+  // sketchpad holds and calls back into it. Sound and storage are handed in.
   const sketchpad = createSketchpad({
     store: patternStore,
     playback: (pattern) => new AudioEngine(pattern),
   });
   $effect(() => () => sketchpad.dispose());
 
-  // Everything you can take away from the staff lives behind this seam, which holds the
-  // drawn `<svg>` so no component here has to. The name is what an exported file is
-  // named after; '' until a pattern carries one, which the sheet reads as unnamed.
+  // Holds the drawn `<svg>` so no component here has to. The name is what an exported file
+  // is named after; '' until a pattern carries one, which the sheet reads as unnamed.
   const sheet = createSheet({ name: () => '' });
 
   const notation = $derived(toNotation(sketchpad.pattern));

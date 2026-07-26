@@ -4,21 +4,20 @@
   import type { Sketchpad } from '$lib/sketchpad.svelte';
 
   interface Props {
-    // The two things the controls act on, handed over whole rather than unpacked into a
-    // prop per button: reading them here is what keeps the display in step.
+    // Handed over whole rather than unpacked per button: reading them here keeps the
+    // display in step.
     sketchpad: Sketchpad;
-    // What can be taken away from the staff. Not ready before its first draw, when
-    // there is nothing to export yet.
+    // Not ready before the staff's first draw, when there is nothing to export.
     sheet: Sheet;
     // Sharing is the app's, not the sketchpad's: the sketchpad says what the URL is,
-    // and putting it on the clipboard needs a browser.
+    // the clipboard needs a browser.
     oncopylink: () => Promise<boolean>;
   }
 
   let { sketchpad, sheet, oncopylink }: Props = $props();
 
-  // Which copy button is currently showing its transient confirmation, if any. Only one
-  // at a time, so a second copy replaces the first rather than leaving both lit.
+  // Which copy button shows its transient confirmation. One at a time, so a second copy
+  // replaces the first rather than leaving both lit.
   let copied = $state<'link' | 'png' | null>(null);
   let copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -30,9 +29,9 @@
     copiedTimer = setTimeout(() => (copied = null), 1500);
   }
 
-  // Starting audio needs a gesture the browser can refuse, and it says so by rejecting.
-  // The sketchpad is left stopped either way, so there is nothing to show the user —
-  // but the rejection still needs somewhere to land.
+  // Starting audio needs a gesture the browser can refuse, and it refuses by rejecting.
+  // The sketchpad stays stopped either way, so there is nothing to show — but the
+  // rejection still needs somewhere to land.
   function play() {
     sketchpad.play().catch((error: unknown) => console.error(error));
   }

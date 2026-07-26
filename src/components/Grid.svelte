@@ -5,7 +5,7 @@
 
   interface Props {
     pattern: Pattern;
-    /** Column highlighted by the playhead during playback; null when stopped. */
+    /** Playhead column; null when stopped. */
     currentStep?: number | null;
     ontoggle: (voice: VoiceId, step: number) => void;
     onsethit: (voice: VoiceId, step: number, hit: Hit) => void;
@@ -19,16 +19,15 @@
 
   let menu: HitMenu;
 
-  /** The count read out loud: 1 2 3 4 for each bar, blank on the off-steps. */
+  /** The count read out loud: 1 2 3 4 per bar, blank on the off-steps. */
   function beatLabel(step: number): string {
     if (step % stepsPerBeat !== 0) return '';
     return String(Math.floor((step % barLength) / stepsPerBeat) + 1);
   }
 
   /**
-   * Open the menu on a cell. Reached by right-click, by the keyboard's own context-menu key
-   * — browsers raise the same event for both — and by Down on the focused cell, for
-   * keyboards that have neither.
+   * Reached by right-click, by the keyboard's context-menu key (same event), and by Down
+   * on the focused cell, for keyboards with neither.
    */
   function openMenu(event: Event, voice: KitVoice, step: number): void {
     event.preventDefault();
@@ -68,9 +67,9 @@
         onkeydown={(event) => event.key === 'ArrowDown' && openMenu(event, voice, step)}
       >
         <!--
-          The variation's mark, echoing the staff's own symbol so the grid and the sheet
-          teach each other. Shape rather than shade, so it survives at a cell's size and
-          without colour; the label above is what carries it to a screen reader.
+          The staff's own symbol, so grid and sheet teach each other. Shape not shade, so
+          it survives at a cell's size and without colour; the aria-label carries it to a
+          screen reader.
         -->
         {#if hit === 'accent'}<span class="mark" aria-hidden="true">&gt;</span>{/if}
       </button>
@@ -115,7 +114,7 @@
     cursor: pointer;
   }
 
-  /* Beat and bar starts get a heavier left edge so the pulse is easy to see. */
+  /* Heavier left edge at beat and bar starts, so the pulse is easy to see. */
   .cell.beat,
   .count.bar {
     border-left-color: var(--color-text-muted);
@@ -134,7 +133,7 @@
     background: var(--color-accent);
   }
 
-  /* Knocked out of the filled cell, so the mark reads at any of the theme's colours. */
+  /* Knocked out of the filled cell, so it reads at any of the theme's colours. */
   .mark {
     color: var(--color-surface);
     font-size: 0.8125rem;
@@ -142,7 +141,7 @@
     line-height: 1;
   }
 
-  /* The playhead: a soft wash over the whole column, on cells and its count label. */
+  /* Playhead: a soft wash over the whole column, cells and count label. */
   .cell.playing {
     background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface));
   }

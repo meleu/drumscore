@@ -17,32 +17,27 @@ import {
 /**
  * Translate a pattern into the notation model.
  *
- * The staff carries two rhythms rather than one: the hands, stems up, and the feet,
- * stems down. Each is written from its own hits, so a snare on 2 and 4 is not chopped up
- * by the kick playing underneath it, and each fills its own measure with its own rests.
- * Drums struck together in the same part become one chord.
+ * Two rhythms, not one: hands stems-up, feet stems-down, each written from its own hits so
+ * a snare on 2 and 4 is not chopped up by the kick underneath, and each filling its own
+ * measure with its own rests. Drums struck together in one part become a chord.
  *
- * Every voice is struck, not held: a stroke is written as a note no longer than its own
- * beat and the time until the next hit is filled with rests. That is what turns a grid of
- * 16th-note cells into readable rhythm while keeping the pulse visible, and it is the same
- * treatment for every drum — the crash and the open hi-hat included.
+ * Every voice is struck, not held: a stroke is a note no longer than its own beat, the
+ * time until the next hit is rests. Same treatment for every drum, crash and open hi-hat
+ * included — that is what turns 16th-note cells into readable rhythm with a visible pulse.
  *
- * How a hit is struck reaches the staff as well as its rhythm: an accent becomes a mark on
- * the note, ORed across the drums sharing that stem, because the mark has one place to go.
- * A variation never changes a note value, a rest, a dot or a beam.
+ * An accent reaches the staff as a mark, ORed across the drums sharing that stem. A
+ * variation never changes a note value, a rest, a dot or a beam.
  *
- * Which drums there are, how each one is written and which part it is written into are the
- * Kit's answers, read from there rather than restated here. What stays is what is true of a
- * part rather than of a drum.
+ * Which drums exist, how each is written and which part it belongs to are the Kit's
+ * answers. What stays here is what is true of a part rather than of a drum.
  */
 
-/** How a part is written: which way its stems point, and where its rests sit. */
 interface Part {
   id: PartId;
   stemDirection: StemDirection;
   /** Rests keep out of the noteheads' way by sitting in their own part of the staff. */
   restPosition: StaffPosition;
-  /** The whole rest is the odd one out: it hangs from the line above the others. */
+  /** The whole rest hangs from the line above the others. */
   wholeRestPosition: StaffPosition;
 }
 
@@ -61,17 +56,14 @@ const PARTS: readonly Part[] = [
   },
 ];
 
-/**
- * The drums written into one part, in canonical order — a filter over the Kit rather than a
- * second list beside it, so the two cannot disagree about which drum belongs where.
- */
+/** A filter over the Kit rather than a second list, so the two cannot disagree. */
 function voicesOf(part: Part): readonly KitVoice[] {
   return KIT.filter((voice) => voice.part === part.id);
 }
 
 interface Duration {
   value: NoteValue;
-  /** Augmentation dots; 1 makes the value half again as long. */
+  /** 1 makes the value half again as long. */
   dots: number;
   steps: number;
   /** A value may begin only where the step is a multiple of this. */
@@ -79,10 +71,9 @@ interface Duration {
 }
 
 /**
- * The plain (undotted) note values expressible at this resolution, longest first. Derived
- * from the dimensions rather than hardcoded, so a finer grid or a different beat value
- * just yields a different table. Each aligns to its own length, so a half note only
- * begins on a half-note boundary, a quarter only on a beat, and so on.
+ * The plain values expressible at this resolution, longest first. Derived from the
+ * dimensions, so a finer grid or a different beat value just yields a different table.
+ * Each aligns to its own length: a half note only on a half-note boundary, and so on.
  */
 function plainDurations(dimensions: GridDimensions): Duration[] {
   const stepsPerWhole = dimensions.stepsPerBeat * dimensions.beatValue;
@@ -98,10 +89,9 @@ function plainDurations(dimensions: GridDimensions): Duration[] {
 /**
  * The dotted form of each plain value, longest first.
  *
- * A dot lengthens a value by half, so a dotted eighth spans three sixteenths — exactly the
- * gap that a bare eighth leaves a rest dangling off. A dotted value aligns to twice its
- * plain length, one binary level coarser: a dotted eighth begins only on a beat, so its
- * borrowed sixteenth falls inside that beat rather than reaching across the next one.
+ * A dotted eighth spans three sixteenths — exactly the gap a bare eighth leaves a rest
+ * dangling off. Alignment is twice the plain length, one binary level coarser, so the
+ * borrowed sixteenth falls inside its beat rather than reaching across the next one.
  */
 function dottedDurations(plain: Duration[]): Duration[] {
   return plain
@@ -111,7 +101,7 @@ function dottedDurations(plain: Duration[]): Duration[] {
 
 const byLongest = (a: Duration, b: Duration): number => b.steps - a.steps;
 
-/** The plain values plus every dotted form, longest first — the vocabulary for notes. */
+/** Plain plus every dotted form, longest first — the vocabulary for notes. */
 function noteDurations(dimensions: GridDimensions): Duration[] {
   const plain = plainDurations(dimensions);
 
@@ -119,13 +109,10 @@ function noteDurations(dimensions: GridDimensions): Duration[] {
 }
 
 /**
- * The plain values plus the dotted forms that fit inside a single beat, longest first.
+ * Plain plus the dotted forms fitting inside one beat, longest first.
  *
- * A dotted rest reads cleanly only when it stays within one beat, so it never swallows a
- * beat line the way a dotted half rest across three beats would. That is the same bound a
- * struck note lives under, so notes and rests dot in step: where a beat's silence is three
- * sixteenths from its start, it becomes one dotted-eighth rest, not an eighth and a
- * sixteenth rest.
+ * A dotted rest reads cleanly only within a beat, so it never swallows a beat line. Same
+ * bound a struck note lives under, so notes and rests dot in step.
  */
 function restDurations(dimensions: GridDimensions): Duration[] {
   const plain = plainDurations(dimensions);
@@ -135,15 +122,13 @@ function restDurations(dimensions: GridDimensions): Duration[] {
 }
 
 /**
- * The longest duration that fits in `length` and may legally begin on `step`.
+ * Longest duration fitting in `length` that may legally begin on `step`. The alignment
+ * test keeps the rhythm readable: nothing straddles a subdivision it has no business
+ * crossing.
  *
- * The alignment test is what keeps the rhythm readable: nothing straddles a subdivision it
- * has no business crossing.
- *
- * There is always an answer, but not by luck: `isSupportedGrid` admits only grids on which
- * some note value spans exactly one step, and a one-step value aligns to 1 and so fits any
- * step and any length of 1 or more. That predicate is the guarantee the throw below rests
- * on — the grids it refuses are exactly the ones that would reach it.
+ * There is always an answer: `isSupportedGrid` admits only grids where some value spans
+ * exactly one step, and a one-step value aligns to 1. That predicate is what the throw
+ * rests on.
  */
 function longestFit(table: Duration[], step: number, length: number): Duration {
   const fit = table.find((duration) => duration.steps <= length && step % duration.align === 0);
@@ -159,12 +144,9 @@ interface Piece extends Duration {
 }
 
 /**
- * Cover `length` steps from `step` with as few legal values as the alignment rule
- * allows.
- *
- * Because each piece has to be able to start where the previous one ended, the splits
- * land on the metrical boundaries a reader looks for: a span crossing a beat is cut at
- * that beat, and a span of 3, 5 or 7 sixteenths comes back as the pieces summing to it.
+ * Cover `length` steps from `step` with as few legal values as alignment allows. Since
+ * each piece must start where the last ended, splits land on the metrical boundaries a
+ * reader looks for: a span crossing a beat is cut at that beat.
  */
 function split(table: Duration[], step: number, length: number): Piece[] {
   const pieces: Piece[] = [];
@@ -197,8 +179,8 @@ interface Chord {
 }
 
 /**
- * How one chord is written: the longest value that fits the gap to the next one without
- * outlasting its own beat. Drums are struck, so what is left of the gap becomes rests.
+ * The longest value fitting the gap to the next chord without outlasting its own beat.
+ * Drums are struck, so what is left of the gap becomes rests.
  */
 function strokeFor(table: Duration[], chord: Chord, gap: number, beatSteps: number): Duration {
   return longestFit(table, chord.step, Math.min(gap, beatSteps));
@@ -212,11 +194,9 @@ function heightOf({ step, octave }: StaffPosition): number {
 }
 
 /**
- * The chord struck at one step, low to high.
- *
- * Drums sharing a position and a notehead — the two hi-hats, which v1 tells apart only by
- * whether they ring — collapse into one head, because writing them twice would stack two
- * identical glyphs on the same line.
+ * The chord struck at one step, low to high. Drums sharing a position and notehead — the
+ * two hi-hats, which v1 tells apart only by ring — collapse into one head rather than
+ * stacking two identical glyphs on the same line.
  */
 function noteheadsAt(pattern: Pattern, voices: readonly KitVoice[], at: number): Notehead[] {
   const struck = voices.filter((voice) => isHit(pattern, voice.id, at));
@@ -231,11 +211,9 @@ function noteheadsAt(pattern: Pattern, voices: readonly KitVoice[], at: number):
 }
 
 /**
- * Whether the stroke at one step is accented: true if *any* of the drums struck there is.
- *
- * The staff has one place to put the mark, so the drums under one stem cannot disagree on
- * the page — an accented snare beside a plain hi-hat draws as one accented note. That is
- * how drum charts are written, and the Pattern keeps which drum was meant (ADR-0014).
+ * Accented if *any* drum struck there is. The staff has one place for the mark, so drums
+ * under one stem cannot disagree on the page — an accented snare beside a plain hi-hat
+ * draws as one accented note. The Pattern keeps which drum was meant (ADR-0014).
  */
 function accentedAt(pattern: Pattern, voices: readonly KitVoice[], at: number): boolean {
   return voices.some((voice) => hitAt(pattern, voice.id, at) === 'accent');
@@ -258,15 +236,13 @@ function chordsIn(pattern: Pattern, part: Part, bar: number, barLength: number):
   return chords;
 }
 
-/** The note values worth beaming: everything shorter than a beat carries a flag. */
+/** Worth beaming: everything shorter than a beat carries a flag. */
 const BEAMABLE: ReadonlySet<NoteValue> = new Set<NoteValue>(['eighth', 'sixteenth']);
 
 /**
- * Group the flagged notes into beams the conventional way: one beam per beat.
- *
- * A run is broken by anything that cannot join it — a rest, an unflagged note, or the
- * start of a new beat — so the beat stays visible through the beaming, just as it does
- * through the note values. A lone flagged note keeps its flag; a beam needs at least two.
+ * One beam per beat, the conventional way. A run breaks on anything that cannot join it —
+ * a rest, an unflagged note, a new beat — so the beat stays visible through the beaming.
+ * A lone flagged note keeps its flag; a beam needs two.
  */
 function beamsFor(events: NotationEvent[], stepsPerBeat: number): BeamGroup[] {
   const groups: BeamGroup[] = [];

@@ -4,9 +4,8 @@ import { createPattern, hitAt, isHit, seed, type Pattern } from './pattern';
 import { createSketchpad, type PatternStore, type Playback } from './sketchpad.svelte';
 
 /**
- * The two adapters the sketchpad reaches the world through, in their test shape. They
- * record rather than act, so every transition can be checked from the outside — which
- * is the whole point of the seam.
+ * The sketchpad's two adapters, in test shape: they record rather than act, so every
+ * transition is checkable from the outside — the point of the seam.
  */
 
 class FakePlayback implements Playback {
@@ -14,7 +13,7 @@ class FakePlayback implements Playback {
   readonly bpms: number[] = [];
   stops = 0;
   disposed = false;
-  /** Makes the next `play()` reject, the way a browser refusing audio does. */
+  /** Makes `play()` reject, as a browser refusing audio does. */
   refuse = false;
 
   private listener: ((step: number | null) => void) | null = null;
@@ -37,7 +36,7 @@ class FakePlayback implements Playback {
 
   stop(): void {
     this.stops++;
-    // The real engine clears the playhead as it stops.
+    // as the real engine does
     this.listener?.(null);
   }
 
@@ -45,7 +44,7 @@ class FakePlayback implements Playback {
     this.disposed = true;
   }
 
-  /** Advance the playhead the way the running sequence does. */
+  /** Advance the playhead as the running sequence does. */
   reachStep(step: number): void {
     this.listener?.(step);
   }
@@ -179,10 +178,7 @@ describe('striking a cell a named way', () => {
     expect(hitAt(sketchpad.pattern, 'snare', 4)).toBe('ghost');
   });
 
-  /**
-   * The refusal costs nothing downstream — no autosave, no sequence rebuild — because the
-   * setter hands the same pattern back and `commit` stops there.
-   */
+  /** Costs nothing downstream: the setter hands its input back and `commit` stops there. */
   it('lets a variation the drum does not accept change nothing', () => {
     const { sketchpad, store, playback } = setup(createPattern());
     const before = sketchpad.pattern;

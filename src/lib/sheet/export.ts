@@ -1,15 +1,12 @@
 /**
  * Export: turn the rendered notation SVG into downloadable files, or a PNG on the
- * clipboard. A thin, browser-only adapter — it carries no musical logic and reads the
- * pixels straight off the live `<svg>` the {@link ../../components/Staff.svelte Staff}
- * drew, so every output reflects exactly what is on screen.
+ * clipboard. Browser-only, no musical logic — it reads the live `<svg>` the
+ * {@link ../../components/Staff.svelte Staff} drew, so exports match the screen.
  *
- * The SVG VexFlow emits draws its glyphs as `<text>` in the Bravura/Academico music
- * fonts, referenced only by family name. That renders in-page because the app has
- * loaded those fonts, but a saved `.svg` opened elsewhere — or the same markup
- * rasterized through an `<img>` for PNG — has no access to them, and every notehead,
- * clef and rest would come out blank. So we embed the fonts as base64 data URIs in a
- * `@font-face` block, making each export self-contained.
+ * VexFlow draws its glyphs as `<text>` in Bravura/Academico, referenced by family name
+ * only. That works in-page, but a saved `.svg` opened elsewhere — or the same markup
+ * rasterized through an `<img>` — has no access to them and comes out blank. So the fonts
+ * are embedded as base64 `@font-face`, making each export self-contained.
  */
 
 import { NOTATION_FONTS } from '../notation/fonts';
@@ -17,9 +14,9 @@ import { NOTATION_FONTS } from '../notation/fonts';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
- * Embedding the fonts is redistributing them, so every export that carries their bytes
- * carries this too (SIL OFL 1.1, clause 2). PNG needs nothing: it rasterizes, keeps no
- * font bytes, and clause 5 exempts documents created with the font.
+ * Embedding the fonts is redistributing them, so every export carrying their bytes carries
+ * this too (SIL OFL 1.1, clause 2). PNG needs nothing: it keeps no font bytes, and clause
+ * 5 exempts documents created with the font.
  */
 const FONT_NOTICE = `
   This file embeds the Bravura and Academico fonts.
@@ -28,13 +25,11 @@ const FONT_NOTICE = `
   Licensed under the SIL Open Font License, Version 1.1: https://scripts.sil.org/OFL
 `;
 
-/** Save a crisp, scalable, self-contained copy of the current notation as SVG. */
 export async function exportSvg(svg: SVGSVGElement, filename = 'drumscore.svg'): Promise<void> {
   const markup = await buildStandaloneSvg(svg);
   downloadBlob(new Blob([markup], { type: 'image/svg+xml;charset=utf-8' }), filename);
 }
 
-/** Save the current notation as a raster PNG. */
 export async function exportPng(
   svg: SVGSVGElement,
   filename = 'drumscore.png',
@@ -44,15 +39,12 @@ export async function exportPng(
 }
 
 /**
- * Put the current notation on the clipboard as a PNG, so it can be pasted straight into
- * a chat, a doc or a slide. Resolves to whether it landed: the clipboard image API is
- * missing in some browsers, and elsewhere the write is refused unless the document has
- * focus and permission, none of which is worth failing loudly over.
+ * Resolves to whether it landed: the clipboard image API is missing in some browsers, and
+ * elsewhere the write is refused without focus and permission — none worth failing loudly.
  *
- * The rasterization is handed to `ClipboardItem` still pending rather than awaited first.
- * Clipboard writes are only allowed while the user's click is being handled, and awaiting
- * anything beforehand spends that window — passing the promise lets the browser hold the
- * gesture open until the blob arrives.
+ * The rasterization is handed to `ClipboardItem` still pending rather than awaited first:
+ * clipboard writes are only allowed while the click is being handled, and awaiting
+ * beforehand spends that window. Passing the promise holds the gesture open.
  */
 export async function copyPng(svg: SVGSVGElement, scale = 2): Promise<boolean> {
   if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) return false;
@@ -65,10 +57,7 @@ export async function copyPng(svg: SVGSVGElement, scale = 2): Promise<boolean> {
   }
 }
 
-/**
- * Rasterize the notation to a PNG blob. The SVG is drawn onto a canvas scaled up
- * (default 2×) so the image stays sharp, over a white background matching the paper.
- */
+/** Drawn onto a canvas scaled up (default 2x) to stay sharp, over white paper. */
 async function renderPng(svg: SVGSVGElement, scale: number): Promise<Blob> {
   const markup = await buildStandaloneSvg(svg);
   const { width, height } = svgSize(svg);
@@ -94,9 +83,8 @@ async function renderPng(svg: SVGSVGElement, scale: number): Promise<Blob> {
 }
 
 /**
- * Clone the live SVG into a portable document: declare the namespace, paint a white
- * background behind the staff (which is drawn black-on-white in either theme), and
- * embed the music fonts so the file renders anywhere.
+ * Clone the live SVG into a portable document: declare the namespace, paint white behind
+ * the staff (drawn black-on-white in either theme), embed the fonts.
  */
 async function buildStandaloneSvg(svg: SVGSVGElement): Promise<string> {
   const clone = svg.cloneNode(true) as SVGSVGElement;
@@ -123,7 +111,7 @@ async function buildStandaloneSvg(svg: SVGSVGElement): Promise<string> {
   return new XMLSerializer().serializeToString(clone);
 }
 
-/** The SVG's intrinsic size, read from its viewBox (falling back to width/height). */
+/** From the viewBox, falling back to width/height. */
 function svgSize(svg: SVGSVGElement): { width: number; height: number } {
   const box = svg.viewBox.baseVal;
   const width = box && box.width ? box.width : svg.width.baseVal.value;
@@ -131,13 +119,12 @@ function svgSize(svg: SVGSVGElement): { width: number; height: number } {
   return { width, height };
 }
 
-/** Cache the fetched-and-encoded fonts; they never change within a session. */
+/** The fonts never change within a session. */
 const fontCache = new Map<string, string | null>();
 
 /**
- * `@font-face` rules for the fonts the staff is drawn with, each with its woff2 inlined
- * as a data URI. Fonts that cannot be fetched are skipped rather than failing the
- * export. Empty when none resolve.
+ * `@font-face` rules with each woff2 inlined as a data URI. Fonts that cannot be fetched
+ * are skipped rather than failing the export; empty when none resolve.
  */
 async function embeddedFontCss(): Promise<string> {
   const faces = await Promise.all(
@@ -151,10 +138,7 @@ async function embeddedFontCss(): Promise<string> {
   return faces.filter(Boolean).join('\n');
 }
 
-/**
- * Fetch a font's woff2 and encode it as a data URI. The URL is our own bundled asset,
- * so this is a same-origin request the browser has almost certainly cached already.
- */
+/** Our own bundled asset, so this is a same-origin request the browser has likely cached. */
 async function fontDataUri(name: string, url: string): Promise<string | null> {
   if (fontCache.has(name)) return fontCache.get(name) ?? null;
 
@@ -165,14 +149,14 @@ async function fontDataUri(name: string, url: string): Promise<string | null> {
       dataUri = `data:font/woff2;base64,${base64(await response.arrayBuffer())}`;
     }
   } catch {
-    // Unreadable for whatever reason: fall through with no embedded font.
+    // unreadable: fall through with no embedded font
   }
 
   fontCache.set(name, dataUri);
   return dataUri;
 }
 
-/** Base64-encode a binary buffer in browser-safe chunks (avoids call-stack limits). */
+/** Chunked to avoid call-stack limits. */
 function base64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   const CHUNK = 0x8000;
@@ -192,7 +176,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Trigger a browser download of a blob under the given filename. */
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

@@ -16,7 +16,7 @@ import {
   type VoiceId,
 } from './pattern';
 
-/** The steps struck for a voice, in order, however they are struck. */
+/** The struck steps of a voice, in order, however struck. */
 function hitSteps(pattern: Pattern, voice: VoiceId): number[] {
   return pattern.rows[voice].flatMap((hit, step) => (hit === 'off' ? [] : [step]));
 }
@@ -58,7 +58,7 @@ describe('toggle', () => {
     expect(hitAt(toggle(empty, 'snare', 4), 'snare', 4)).toBe('plain');
   });
 
-  /** One gesture always empties a step, so no variation ever takes two clicks to undo. */
+  /** One gesture always empties a step: no variation takes two clicks to undo. */
   const struck: Hit[] = ['plain', 'accent', 'ghost', 'flam', 'drag'];
 
   it.each(struck)('clears a cell holding %s', (hit) => {
@@ -105,10 +105,7 @@ describe('setHit', () => {
     expect(isHit(setHit(accented, 'kick', 0, 'off'), 'kick', 0)).toBe(false);
   });
 
-  /**
-   * Every refusal hands back the very pattern it was given, which is what the sketchpad
-   * reads as "nothing happened" — no autosave, no sequence rebuild.
-   */
+  /** A refusal hands back its input — what the sketchpad reads as "nothing happened". */
   it('refuses a variation the drum does not accept', () => {
     expect(setHit(empty, 'crash', 0, 'accent')).toBe(empty);
     expect(setHit(empty, 'kick', 0, 'ghost')).toBe(empty);
@@ -144,7 +141,7 @@ describe('setHit', () => {
 
 describe('clear', () => {
   it('empties every cell while preserving dimensions and tempo', () => {
-    // Variations included: starting over has to genuinely start over.
+    // Variations included: starting over must genuinely start over.
     const cleared = clear(setHit(seed(), 'snare', 4, 'accent'));
     const steps = totalSteps(cleared.dimensions);
 
@@ -173,7 +170,6 @@ describe('seed dimensions', () => {
   });
 });
 
-/** A row of the verdict table below, spelled out so the table reads as a table. */
 interface Verdict {
   what: string;
   dimensions: GridDimensions;
@@ -190,17 +186,15 @@ function grid(
 }
 
 /**
- * Which grids drumscore supports, stated rather than derived, so the predicate's intent is
- * readable without working it out from the note-value vocabulary.
+ * Which grids are supported, stated rather than derived, so the predicate's intent reads
+ * without working it out from the note-value vocabulary.
  *
- * Refusals marked TEMPORARY are refused only because that vocabulary is what it is today.
- * They are the ones a future note value lifts on its own, with no edit to the predicate —
- * which is the whole reason the predicate asks the vocabulary instead of restating it. The
- * other refusals are permanent: a zero grid has nothing to draw, and the capacity guard is
- * a deliberate ceiling.
+ * TEMPORARY refusals are down to today's vocabulary alone; a future note value lifts them
+ * with no edit to the predicate. The rest are permanent: a zero grid has nothing to draw,
+ * and the capacity guard is a deliberate ceiling.
  */
 const VERDICTS: readonly Verdict[] = [
-  // Writable today: each of these has a note value spanning exactly one step.
+  // Writable today: each has a note value spanning exactly one step.
   { what: "today's default, 4/4 sixteenths", dimensions: DEFAULT_DIMENSIONS, supported: true },
   { what: '4/4 at eighth-note resolution', dimensions: grid(2, 4, 4, 2), supported: true },
   { what: '4/4 at quarter-note resolution', dimensions: grid(1, 4, 4, 2), supported: true },
@@ -212,26 +206,23 @@ const VERDICTS: readonly Verdict[] = [
   { what: 'one whole note per bar', dimensions: grid(1, 1, 1, 1), supported: true },
   { what: 'the step ceiling exactly', dimensions: grid(4, 4, 4, 256), supported: true },
 
-  // TEMPORARY: a triplet resolution, and no value spans a third of a beat. Lifted the day
-  // the vocabulary gains tuplet values. Today this grid reaches the engine from a hand-made
-  // link and throws from inside its splitting logic.
+  // TEMPORARY: triplets, and no value spans a third of a beat. Lifted by tuplet values.
   { what: 'three steps to a beat [TEMPORARY]', dimensions: grid(3, 4, 4, 2), supported: false },
 
-  // TEMPORARY: needs a 32nd, which the vocabulary stops short of — the same failure from
-  // the other end. Lifted the day it gains `thirtysecond`.
+  // TEMPORARY: needs a 32nd — the same failure from the other end.
   { what: 'eight steps to a beat [TEMPORARY]', dimensions: grid(8, 4, 4, 2), supported: false },
 
-  // TEMPORARY: the same 32-per-whole-note resolution reached through the beat value rather
-  // than the step count, so the rule is visibly about the product of the two.
+  // TEMPORARY: 32-per-whole reached via the beat value, so the rule is visibly about the
+  // product of the two.
   { what: '32nds via the beat value [TEMPORARY]', dimensions: grid(4, 4, 8, 2), supported: false },
 
-  // Permanently refused: a grid with a zero in it has nothing to draw.
+  // Permanent: a grid with a zero in it has nothing to draw.
   { what: 'zero steps per beat', dimensions: grid(0, 4, 4, 2), supported: false },
   { what: 'zero beats per bar', dimensions: grid(4, 0, 4, 2), supported: false },
   { what: 'zero bars', dimensions: grid(4, 4, 4, 0), supported: false },
   { what: 'a fractional step count', dimensions: grid(1.5, 4, 4, 2), supported: false },
 
-  // Refused by the capacity guard, each bound catching what the others do not.
+  // Capacity guard; each bound catches what the others do not.
   { what: 'the maximal header, 64 everywhere', dimensions: grid(64, 64, 64, 64), supported: false },
   { what: 'too many steps, few enough bars', dimensions: grid(4, 8, 4, 256), supported: false },
   { what: 'too many bars, few enough steps', dimensions: grid(1, 4, 4, 257), supported: false },
