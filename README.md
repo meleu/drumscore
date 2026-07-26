@@ -17,6 +17,36 @@ actual music notation. The options I've found force a trade-off:
 When I have a pattern in my head, I want to both _hear_ it and
 _see it as an actual music sheet_.
 
+## Roadmap
+
+Fundamental features I want to implement:
+
+- [ ] flams and drags
+- [ ] dynamics: accents and ghost notes
+- [ ] add more voices
+  - [ ] tom 1
+  - [ ] tom 2
+  - [ ] floor tom
+  - [ ] open hi-hat
+  - [ ] hi-hat foot
+  - [ ] ride bell
+  - [ ] cow bell
+- [ ] 32nd notes
+- [ ] triplets
+- [ ] custom time signature
+
+UI improvements:
+
+- [ ] add text to the sheet
+  - [ ] title
+  - [ ] author
+  - [ ] tempo (a toggle to make it optional)
+- [ ] add more bars (maybe a carousel?)
+- [ ] make bars selectable so the user can loop the selected bars
+- [ ] make it usable in small screens (mobile-friendly)
+- [ ] print-friendly version (or export as pdf)
+- [ ] if previous bar is identical, use the repeat notation on staff
+
 ## Acknowledgements
 
 This project stands on the shoulders of these excellent open source projects:
