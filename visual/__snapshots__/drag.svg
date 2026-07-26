@@ -45,32 +45,36 @@
 <text stroke="none" font-size="30pt" x="178.75" y="87"></text>
 <g class="vf-stavenote" font-size="30pt">
 <g class="vf-notehead">
-<text stroke="none" font-size="20pt" x="150.75" y="87"></text>
+<text stroke="none" font-size="20pt" x="156.75" y="87"></text>
 </g>
-<rect x="150.75" y="62.667" width="8" height="28.333" opacity="0" pointer-events="auto">
+<rect x="156.75" y="62.667" width="8" height="28.333" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-stavenote" font-size="30pt">
 <g class="vf-notehead">
-<text stroke="none" font-size="20pt" x="162.75" y="87"></text>
+<text stroke="none" font-size="20pt" x="168.75" y="87"></text>
 </g>
-<rect x="162.75" y="62.667" width="8" height="28.333" opacity="0" pointer-events="auto">
+<rect x="168.75" y="62.667" width="8" height="28.333" opacity="0" pointer-events="auto">
 </rect>
 </g>
 <g class="vf-beam" font-size="30pt">
 <g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M158 87L158 59.417">
+<path stroke-width="1.5" fill="none" d="M164 87L164 59.417">
 </path>
 </g>
 <g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M170 87L170 59.417">
+<path stroke-width="1.5" fill="none" d="M176 87L176 59.417">
 </path>
 </g>
-<path stroke="none" d="M157.25 58.667L157.25 61.667L170.25 61.667L170.25 58.667Z">
+<path stroke="none" d="M163.25 58.667L163.25 61.667L176.25 61.667L176.25 58.667Z">
 </path>
-<path stroke="none" d="M157.25 63.167L157.25 66.167L170.25 66.167L170.25 63.167Z">
+<path stroke="none" d="M163.25 63.167L163.25 66.167L176.25 66.167L176.25 63.167Z">
 </path>
-<path stroke="none" d="M157.25 67.667L157.25 70.667L170.25 70.667L170.25 67.667Z">
+<path stroke="none" d="M163.25 67.667L163.25 70.667L176.25 70.667L176.25 67.667Z">
+</path>
+</g>
+<g class="vf-stavetie" font-size="30pt">
+<path stroke="none" d="M190.75 94Q173.75 102,156.75 94Q173.75 106,190.75 94Z">
 </path>
 </g>
 </g>

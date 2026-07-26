@@ -486,25 +486,25 @@ describe('ghost notes', () => {
 
 /**
  * What the grace group in front of a stroke contains. The convention is the thing being
- * asserted: a flam is one unslashed eighth, a drag two unslashed thirty-seconds beamed
- * together, neither slurred to the note it precedes.
+ * asserted: a flam is one slashed eighth, a drag two thirty-seconds beamed together, and
+ * both are slurred to the note they precede.
  */
 describe('flams and drags', () => {
   /** The glyph without the ghosting: what a grace note carries. */
   const snareHead = { style: SNARE.style, position: SNARE.position };
 
-  it('draws one unslashed eighth before a flammed stroke', () => {
+  it('draws one slashed, slurred eighth before a flammed stroke', () => {
     const pattern = struck({ snare: [4] }, [['snare', 4, 'flam']]);
 
     expect(noteAt(pattern, 'hands', 4).grace).toEqual({
       notes: [{ value: 'eighth', notehead: snareHead }],
       beamed: false,
-      slashed: false,
-      slurred: false,
+      slashed: true,
+      slurred: true,
     });
   });
 
-  it('draws two beamed thirty-seconds before a dragged stroke', () => {
+  it('draws two beamed, slurred thirty-seconds before a dragged stroke', () => {
     const pattern = struck({ snare: [4] }, [['snare', 4, 'drag']]);
 
     expect(noteAt(pattern, 'hands', 4).grace).toEqual({
@@ -513,8 +513,10 @@ describe('flams and drags', () => {
         { value: 'thirtysecond', notehead: snareHead },
       ],
       beamed: true,
+      // The beam is what tells a drag from a flam, so the slash the flam carries would be
+      // one more line saying the same thing over a group already unmistakable.
       slashed: false,
-      slurred: false,
+      slurred: true,
     });
   });
 

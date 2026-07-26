@@ -62,7 +62,7 @@ export interface GraceNote {
  * The strikes squeezed in before a note: a flam's one, a drag's two.
  *
  * Spelled out rather than named, so what the convention *is* — the values, the beam, the
- * absent slash and slur — is asserted here in Node instead of living as a handful of flags
+ * slash and the slur — is asserted here in Node instead of living as a handful of flags
  * inside the drawing library's adapter. The strikes take no time from the bar: they are
  * played out of the beat's own room, which is why they hang off a note rather than sitting
  * in the events list beside one.
@@ -72,9 +72,9 @@ export interface GraceGroup {
   notes: GraceNote[];
   /** Drawn under one beam. A lone grace note keeps its flag, as a lone note does. */
   beamed: boolean;
-  /** The stroke through the stem. Drumset notation writes flams and drags without it. */
+  /** The stroke through the stem, marking a lone grace note as crushed rather than counted. */
   slashed: boolean;
-  /** The curve tying the group to its note. Standard drumset notation omits it. */
+  /** The curve tying the group to its note, which is what says it is played out of its time. */
   slurred: boolean;
 }
 

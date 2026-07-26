@@ -224,10 +224,10 @@ interface GraceStrokes extends Omit<GraceGroup, 'notes'> {
 }
 
 /**
- * What each gesture is written as: the whole convention, as data. A flam is one unslashed
- * eighth; a drag is two unslashed thirty-seconds under a beam. Neither is slurred to the
- * stroke it precedes — the slur and the slash are melodic notation, and drumset charts
- * write these without them.
+ * What each gesture is written as: the whole convention, as data. A flam is one slashed
+ * eighth; a drag is two thirty-seconds under a beam, which is line enough without a slash
+ * over it. Both are slurred to the stroke they precede — the curve is what says the graces
+ * belong to that stroke and are played out of its own room rather than counted in the bar.
  *
  * Exhaustive over the union, so a rudiment added to it is a compile error here until it
  * says what it looks like.
@@ -237,8 +237,8 @@ const GRACE_STROKES: Record<Hit, GraceStrokes | null> = {
   plain: null,
   accent: null,
   ghost: null,
-  flam: { values: ['eighth'], beamed: false, slashed: false, slurred: false },
-  drag: { values: ['thirtysecond', 'thirtysecond'], beamed: true, slashed: false, slurred: false },
+  flam: { values: ['eighth'], beamed: false, slashed: true, slurred: true },
+  drag: { values: ['thirtysecond', 'thirtysecond'], beamed: true, slashed: false, slurred: true },
 };
 
 /**

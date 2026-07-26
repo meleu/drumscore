@@ -82,9 +82,25 @@ function keyOf({ style, position }: NoteheadGlyph): string {
 }
 
 /**
+ * How much of VexFlow's gap between a grace group and its note to take back, in pixels.
+ *
+ * The graces sit in the room VexFlow reserves to the left of the note, and it reserves the
+ * width their own little voice formats to — which carries the trailing padding any voice
+ * leaves after its last note, room a crushed cluster has no use for. Under-reporting that
+ * width by this much slides the graces up against the stroke they belong to and hands the
+ * space back to the measure, which is where the convention wants it: a flam is read as one
+ * gesture, not as a note with something loitering in front of it.
+ *
+ * Tuned by eye against the fixtures rather than derived — VexFlow's padding is a spacing
+ * choice, not a metric of the font.
+ */
+const GRACE_TIGHTENING = 6;
+
+/**
  * The little notes crowded in before a stroke. Every decision in here was made by the
  * engine: how many, what value each is, whether they are beamed, slashed or slurred, and
- * which line they sit on. The only translation is into VexFlow's spelling of it.
+ * which line they sit on. The only translation is into VexFlow's spelling of it — and how
+ * close it draws them.
  */
 function toGraceNotes(grace: GraceGroup, stemDirection: StemDirection): GraceNoteGroup {
   const notes = grace.notes.map(
@@ -98,8 +114,16 @@ function toGraceNotes(grace: GraceGroup, stemDirection: StemDirection): GraceNot
       }),
   );
   const group = new GraceNoteGroup(notes, grace.slurred);
+  if (grace.beamed) group.beamNotes();
 
-  return grace.beamed ? group.beamNotes() : group;
+  // Measuring the group here, before the formatter asks it how wide it is, is what makes the
+  // width ours to trim: `preFormat` caches, so VexFlow's own call later is a no-op and the
+  // trimmed figure is the one it lays out with. `getWidth` reports the padded width and
+  // `setWidth` takes the bare one, hence the padding coming back off.
+  group.preFormat();
+  group.setWidth(Math.max(0, group.getWidth() - StaveNote.minNoteheadPadding - GRACE_TIGHTENING));
+
+  return group;
 }
 
 /** VexFlow spells a rest as the value's code with an `r` suffix. */

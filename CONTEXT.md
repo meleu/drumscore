@@ -110,9 +110,9 @@ _Avoid_: stack, cluster, group, simultaneity
 **Grace group**:
 The small strikes written before a note and played just ahead of it: a flam's one, a
 drag's two. Belongs to the note rather than to a notehead, because one group is drawn
-ahead of the whole stem. It spells itself out — the note values, the beam, the absent
-slash and slur — so the convention is stated where it can be read, not left to the
-drawing library.
+ahead of the whole stem. It spells itself out — the note values, the beam, the slash and
+the slur — so the convention is stated where it can be read, not left to the drawing
+library.
 _Avoid_: ornament, grace note, ruff, rudiment, acciaccatura, flourish
 
 **Beam group**:

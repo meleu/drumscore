@@ -45,17 +45,23 @@
 <text stroke="none" font-size="30pt" x="178.75" y="87"></text>
 <g class="vf-stavenote" font-size="30pt">
 <g class="vf-stem">
-<path stroke-width="1.5" fill="none" d="M162 87L162 66.667">
+<path stroke-width="1.5" fill="none" d="M168 87L168 66.667">
 </path>
 </g>
 <g class="vf-notehead">
-<text stroke="none" font-size="20pt" x="154.75" y="87"></text>
+<text stroke="none" font-size="20pt" x="160.75" y="87"></text>
 </g>
 <g class="vf-flag">
-<text stroke="none" font-size="20pt" x="161.25" y="64.667"></text>
+<text stroke="none" font-size="20pt" x="167.25" y="64.667"></text>
 </g>
-<rect x="154.75" y="63.667" width="13.5" height="27.333" opacity="0" pointer-events="auto">
+<rect x="160.75" y="63.667" width="13.5" height="27.333" opacity="0" pointer-events="auto">
 </rect>
+</g>
+<path stroke-width="0.6666666666666666" fill="none" d="M160.75 83.333L176.75 67.333Z">
+</path>
+<g class="vf-stavetie" font-size="30pt">
+<path stroke="none" d="M190.75 94Q175.75 102,160.75 94Q175.75 106,190.75 94Z">
+</path>
 </g>
 </g>
 <g class="vf-notehead">
