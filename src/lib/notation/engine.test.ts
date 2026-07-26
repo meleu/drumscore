@@ -1,13 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { createPattern, stepsPerBar, toggle, type Pattern, type VoiceId } from '$lib/pattern';
+import {
+  createPattern,
+  isSupportedGrid,
+  stepsPerBar,
+  toggle,
+  totalSteps,
+  type GridDimensions,
+  type Pattern,
+  type VoiceId,
+} from '$lib/pattern';
 import { toNotation } from './engine';
-import type {
-  NotationEvent,
-  NotationMeasure,
-  NotationPart,
-  Notehead,
-  NoteValue,
-  PartId,
+import {
+  VALUES_PER_WHOLE,
+  type NotationEvent,
+  type NotationMeasure,
+  type NotationModel,
+  type NotationPart,
+  type Notehead,
+  type NoteValue,
+  type PartId,
 } from './model';
 
 /** Build a pattern by switching on the listed steps for each voice. */
@@ -388,6 +399,135 @@ describe('beaming', () => {
       [2, 3],
       [4, 5],
     ]);
+  });
+});
+
+/**
+ * The claim `isSupportedGrid` makes, checked against the engine that has to honour it.
+ *
+ * The predicate says a grid is writable when the note-value vocabulary holds a value spanning
+ * exactly one step. This sweep is what makes that a testable claim rather than an argument:
+ * every grid it admits must survive the worst case the engine has — a hit on every step of
+ * every voice, which is the densest splitting and beaming there is.
+ *
+ * Only the admitted grids are visited. The direction that reaches a user is the predicate
+ * being too permissive; a grid it refuses cannot arrive, so nothing is owed about it.
+ *
+ * This is the drift guard. When the vocabulary grows a value, this is the test that fails if
+ * "some value spans exactly one step" turns out not to be enough for the grids it just let in.
+ */
+describe('the grids the predicate admits', () => {
+  /**
+   * Each dimension over 1-16, and one bar or two — a second measure is what proves the engine
+   * repeats correctly, and a third proves nothing further. Sixteen is past every meter and
+   * resolution today's vocabulary can write, so the space contains the whole answer rather
+   * than a sample of it.
+   */
+  const RANGE = 16;
+  const BARS = 2;
+
+  function everyGrid(): GridDimensions[] {
+    const grids: GridDimensions[] = [];
+
+    for (let stepsPerBeat = 1; stepsPerBeat <= RANGE; stepsPerBeat++) {
+      for (let beatsPerBar = 1; beatsPerBar <= RANGE; beatsPerBar++) {
+        for (let beatValue = 1; beatValue <= RANGE; beatValue++) {
+          for (let bars = 1; bars <= BARS; bars++) {
+            grids.push({ stepsPerBeat, beatsPerBar, beatValue, bars });
+          }
+        }
+      }
+    }
+
+    return grids;
+  }
+
+  const admitted = everyGrid().filter(isSupportedGrid);
+
+  /** A hit on every step of every voice: the most splitting and beaming a grid can ask for. */
+  function denselyHit(dimensions: GridDimensions): Pattern {
+    const pattern = createPattern(dimensions);
+    const struck = new Array<boolean>(totalSteps(dimensions)).fill(true);
+    const rows: Record<VoiceId, readonly boolean[]> = { ...pattern.rows };
+
+    for (const voice of Object.keys(rows) as VoiceId[]) rows[voice] = struck;
+
+    return { ...pattern, rows };
+  }
+
+  /** How many steps a value lasts on this grid — the same arithmetic the engine's tables use. */
+  function stepsOf(value: NoteValue, dimensions: GridDimensions): number {
+    const entry = VALUES_PER_WHOLE.find(([candidate]) => candidate === value);
+    if (!entry) throw new Error(`no such note value: ${value}`);
+
+    return (dimensions.stepsPerBeat * dimensions.beatValue) / entry[1];
+  }
+
+  const nameOf = ({ stepsPerBeat, beatsPerBar, beatValue, bars }: GridDimensions): string =>
+    `${stepsPerBeat} steps x ${beatsPerBar}/${beatValue} x ${bars} bar(s)`;
+
+  /**
+   * What goes wrong when the engine writes a dense pattern on this grid, or null if nothing
+   * does. Stronger than "does not throw": every part of every measure has to be filled
+   * exactly, each event starting where the one before it ended.
+   */
+  function faultIn(dimensions: GridDimensions): string | null {
+    let model: NotationModel;
+
+    try {
+      model = toNotation(denselyHit(dimensions));
+    } catch (error) {
+      return `${nameOf(dimensions)}: threw ${String(error)}`;
+    }
+
+    const barLength = stepsPerBar(dimensions);
+
+    for (const { parts } of model.measures) {
+      for (const { id, events } of parts) {
+        // A dot adds half again, so a dotted value covers 1.5x its plain step count.
+        const lengths = events.map(
+          (event) => stepsOf(event.value, dimensions) * (2 - 2 ** -event.dots),
+        );
+        const total = lengths.reduce((sum, steps) => sum + steps, 0);
+
+        if (total !== barLength) {
+          return `${nameOf(dimensions)}: the ${id} fill ${total} of ${barLength} steps`;
+        }
+        if (events.map(({ step }) => step).join() !== runningTotals(lengths).join()) {
+          return `${nameOf(dimensions)}: the ${id} events do not follow one another`;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  it('admits every writable step-and-beat-value pair against every meter in the space', () => {
+    // Fifteen pairs of stepsPerBeat x beatValue multiply to a value the vocabulary knows,
+    // times sixteen meters, times one bar or two. Asserted as a number so that a change
+    // quietly narrowing or widening the predicate moves it rather than passing silently.
+    expect(admitted).toHaveLength(480);
+  });
+
+  it('visits the odd meters and coarse resolutions that already work', () => {
+    expect(admitted).toContainEqual({ stepsPerBeat: 2, beatsPerBar: 7, beatValue: 8, bars: 1 });
+    expect(admitted).toContainEqual({ stepsPerBeat: 2, beatsPerBar: 6, beatValue: 8, bars: 2 });
+    expect(admitted).toContainEqual({ stepsPerBeat: 4, beatsPerBar: 5, beatValue: 4, bars: 2 });
+    expect(admitted).toContainEqual({ stepsPerBeat: 2, beatsPerBar: 4, beatValue: 4, bars: 2 });
+  });
+
+  it('does not visit the resolutions the vocabulary cannot write', () => {
+    const triplets = admitted.filter(({ stepsPerBeat }) => stepsPerBeat % 3 === 0);
+    const thirtyseconds = admitted.filter(
+      ({ stepsPerBeat, beatValue }) => stepsPerBeat * beatValue === 32,
+    );
+
+    expect(triplets).toEqual([]);
+    expect(thirtyseconds).toEqual([]);
+  });
+
+  it('writes a densely-hit pattern on every one of them', () => {
+    expect(admitted.map(faultIn).filter((fault) => fault !== null)).toEqual([]);
   });
 });
 

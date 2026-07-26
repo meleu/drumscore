@@ -134,13 +134,17 @@ function restDurations(dimensions: GridDimensions): Duration[] {
  * The longest duration that fits in `length` and may legally begin on `step`.
  *
  * The alignment test is what keeps the rhythm readable: nothing straddles a subdivision it
- * has no business crossing. The one-step value always qualifies, so there is always an
- * answer.
+ * has no business crossing.
+ *
+ * There is always an answer, but not by luck: `isSupportedGrid` admits only grids on which
+ * some note value spans exactly one step, and a one-step value aligns to 1 and so fits any
+ * step and any length of 1 or more. That predicate is the guarantee the throw below rests
+ * on — the grids it refuses are exactly the ones that would reach it.
  */
 function longestFit(table: Duration[], step: number, length: number): Duration {
   const fit = table.find((duration) => duration.steps <= length && step % duration.align === 0);
 
-  /* v8 ignore next -- unreachable: the one-step value fits any step and any length >= 1 */
+  /* v8 ignore next -- unreachable while `isSupportedGrid` guards the door; see above */
   if (!fit) throw new Error(`no note value fits ${length} step(s) at step ${step}`);
 
   return fit;

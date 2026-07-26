@@ -157,19 +157,19 @@ comment was part of it.
 
 ### Acceptance criteria
 
-- [ ] A sweep test enumerates 1–16 × 1–16 × 1–16 × 1–2, filters it through the predicate,
+- [x] A sweep test enumerates 1–16 × 1–16 × 1–16 × 1–2, filters it through the predicate,
       and asserts every admitted grid produces a notation model from a densely-hit pattern.
-- [ ] The assertion is stronger than "does not throw": each part's events sum to exactly its
+- [x] The assertion is stronger than "does not throw": each part's events sum to exactly its
       measure's length.
-- [ ] The sweep visits the known-good odd meters and coarse resolutions — 7/8, 6/8, 5/4,
+- [x] The sweep visits the known-good odd meters and coarse resolutions — 7/8, 6/8, 5/4,
       eighth-note resolution — and does not visit the grids the predicate refuses.
-- [ ] The count of admitted grids is asserted, so a change that quietly narrows or widens the
+- [x] The count of admitted grids is asserted, so a change that quietly narrows or widens the
       predicate moves a number rather than passing silently.
-- [ ] Deliberately loosening the predicate to admit three steps per beat fails the sweep.
+- [x] Deliberately loosening the predicate to admit three steps per beat fails the sweep.
       Verify, then revert.
-- [ ] The engine's coverage-ignore comment names the predicate rather than asserting
+- [x] The engine's coverage-ignore comment names the predicate rather than asserting
       impossibility, and no musical logic in the engine has changed.
-- [ ] `pnpm verify` passes; the sweep runs in a time that keeps the suite comfortable.
+- [x] `pnpm verify` passes; the sweep runs in a time that keeps the suite comfortable.
 
 ---
 
