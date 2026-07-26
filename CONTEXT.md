@@ -29,8 +29,9 @@ _Avoid_: instrument, drum, track, lane, channel, row
 
 **Kit**:
 Every Voice there is, one row each: what the drum is called, whether it is played by the
-hands or the feet, and how it is written on the staff. It maps what the user draws onto
-what the staff shows, and is the one table that has to keep the two in correspondence.
+hands or the feet, how it is written on the staff, and which variations it accepts. It maps
+what the user draws onto what the staff shows, and is the one table that has to keep the two
+in correspondence.
 _Avoid_: kit piece, drum map, instrument table, drum set
 
 **Step**:
@@ -39,8 +40,10 @@ resolution a step is a sixteenth note.
 _Avoid_: tick, slot, cell, column, sixteenth
 
 **Hit**:
-One voice struck at one step. Binary: a hit is on or off, with no velocity.
-_Avoid_: note, onset, trigger, event, on-cell
+One voice struck at one step, and how it is struck: not at all, plainly, or with exactly
+one variation — an accent, a ghost note, a flam or a drag. One value, never a combination
+and never a number; which variations a voice takes is the Kit's answer, row by row.
+_Avoid_: note, onset, trigger, event, on-cell, velocity, dynamic, ornament
 
 **Bar**:
 One measure's worth of steps on the grid. Named _bar_ on the grid side and _measure_ on

@@ -1,5 +1,6 @@
 import {
   createPattern,
+  setHit,
   toggle,
   type GridDimensions,
   type Pattern,
@@ -21,7 +22,10 @@ import {
 
 export interface Fixture {
   name: string;
+  /** The plain hits. A step listed here and in `accents` is drawn accented. */
   hits: Partial<Record<VoiceId, number[]>>;
+  /** The accented hits, which need no entry in `hits`: an accent is placed in one go. */
+  accents?: Partial<Record<VoiceId, number[]>>;
   /**
    * The grid to draw this one on; the default grid when it says nothing. A whole record
    * rather than a partial merged over the default, because one fixture names it and a merge
@@ -51,6 +55,16 @@ export const FIXTURES: readonly Fixture[] = [
       snare: [4, 12, 20, 28],
     },
   },
+  // An accent above the stem, and a plain stroke of the same value beside it to read it
+  // against. Two bars, so the second says the mark does not leak into the measures after it.
+  { name: 'accented-hand', hits: { snare: [12] }, accents: { snare: [4] } },
+  // The same, in the part written stems down: the mark belongs under the staff there, clear
+  // of the hands sharing it.
+  { name: 'accented-foot', hits: { kick: [8] }, accents: { kick: [0] } },
+  // What ADR-0014 is about: the accented snare and the plain hi-hat share a stem, so the
+  // chord draws one accent. This baseline is what pins that, and it is the common case
+  // rather than an edge one.
+  { name: 'accented-chord', hits: { closedHiHat: [0, 4, 8, 12] }, accents: { snare: [0] } },
   {
     // One bar of 7/8 at sixteenth resolution: fourteen steps, the beat an eighth rather than
     // the quarter every other fixture assumes. An odd number of beats is what makes the
@@ -71,9 +85,15 @@ export const FIXTURES: readonly Fixture[] = [
 ];
 
 export function patternFor(fixture: Fixture): Pattern {
-  return Object.entries(fixture.hits).reduce<Pattern>(
+  const struck = Object.entries(fixture.hits).reduce<Pattern>(
     (pattern, [voice, steps]) =>
       steps.reduce((current, step) => toggle(current, voice as VoiceId, step), pattern),
     createPattern(fixture.dimensions),
+  );
+
+  return Object.entries(fixture.accents ?? {}).reduce<Pattern>(
+    (pattern, [voice, steps]) =>
+      steps.reduce((current, step) => setHit(current, voice as VoiceId, step, 'accent'), pattern),
+    struck,
   );
 }

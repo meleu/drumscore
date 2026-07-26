@@ -19,6 +19,36 @@
 import type { Notehead, PartId } from './notation/model';
 
 /**
+ * A way of striking a drum beyond an ordinary stroke. One global list; what is per-drum is
+ * which of its members that drum admits, which is the `variations` column below (ADR-0013).
+ */
+export type Variation = 'accent' | 'ghost' | 'flam' | 'drag';
+
+/**
+ * How one cell of the grid is struck: not at all, plainly, or with exactly one variation.
+ *
+ * A closed union rather than a set of flags, so an accented flam does not typecheck rather
+ * than being validated away (ADR-0012). It lives here, beside the column that says which
+ * members each drum admits, so that the question "may this drum be struck this way?" has
+ * one place to be asked — {@link accepts} — and one place to be answered.
+ */
+export type Hit = 'off' | 'plain' | Variation;
+
+/**
+ * What a human reads for each way of striking a drum: the menu's items and the word a grid
+ * cell announces. Beside the vocabulary rather than inside a component, so a variation
+ * added to the union is a compile error until it has been named.
+ */
+export const HIT_LABELS: Record<Hit, string> = {
+  off: 'Empty',
+  plain: 'Plain',
+  accent: 'Accent',
+  ghost: 'Ghost',
+  flam: 'Flam',
+  drag: 'Drag',
+};
+
+/**
  * What every row of the Kit has to state. The list below is checked against it, so a drum
  * missing any of these never compiles.
  */
@@ -30,6 +60,11 @@ interface KitRow {
   part: PartId;
   /** How the drum is written: its glyph, and the line or space it sits on. */
   notehead: Notehead;
+  /**
+   * The variations this drum accepts beyond a plain stroke, in menu order. Empty means it
+   * is struck one way only — which is a statement about the drum, not a gap in the row.
+   */
+  variations: readonly Variation[];
 }
 
 /**
@@ -47,36 +82,44 @@ export const KIT = [
     label: 'Kick',
     part: 'feet',
     notehead: { style: 'normal', position: { step: 'f', octave: 4 } },
+    variations: ['accent'],
   },
   {
     id: 'snare',
     label: 'Snare',
     part: 'hands',
     notehead: { style: 'normal', position: { step: 'c', octave: 5 } },
+    variations: ['accent', 'ghost', 'flam', 'drag'],
   },
   {
     id: 'closedHiHat',
     label: 'Closed Hi-hat',
     part: 'hands',
     notehead: { style: 'cross', position: { step: 'g', octave: 5 } },
+    variations: ['accent'],
   },
   {
     id: 'openHiHat',
     label: 'Open Hi-hat',
     part: 'hands',
     notehead: { style: 'cross', position: { step: 'g', octave: 5 } },
+    variations: ['accent'],
   },
   {
+    // The one drum struck exactly one way. A choke is the variation it is waiting for, and
+    // an empty list is what says so without pretending the general rule has an exception.
     id: 'crash',
     label: 'Crash',
     part: 'hands',
     notehead: { style: 'cross', position: { step: 'a', octave: 5 } },
+    variations: [],
   },
   {
     id: 'ride',
     label: 'Ride',
     part: 'hands',
     notehead: { style: 'cross', position: { step: 'f', octave: 5 } },
+    variations: ['accent'],
   },
 ] as const satisfies readonly KitRow[];
 
@@ -102,3 +145,21 @@ export interface KitVoice extends KitRow {
  * display order needs to diverge from canonical order there is one line to change.
  */
 export const DISPLAY_ORDER: readonly KitVoice[] = [...KIT].toReversed();
+
+/** The rows by id, so the predicate below is a lookup rather than a scan per cell. */
+const BY_ID: ReadonlyMap<VoiceId, KitVoice> = new Map(KIT.map((voice) => [voice.id, voice]));
+
+/**
+ * May this drum be struck this way? The question everyone else asks instead of restating
+ * the table above (ADR-0013) — the setter, which refuses by returning the pattern it was
+ * given; the codec, which refuses by rejecting the whole string; the menu, which never
+ * offers what would be refused.
+ *
+ * Silence and a plain stroke are available on every drum, so only the variations are looked
+ * up: a row saying nothing is a row that takes no variations, not one that cannot be struck.
+ */
+export function accepts(voice: VoiceId, hit: Hit): boolean {
+  if (hit === 'off' || hit === 'plain') return true;
+
+  return BY_ID.get(voice)?.variations.includes(hit) ?? false;
+}

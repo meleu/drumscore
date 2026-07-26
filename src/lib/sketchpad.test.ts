@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KIT } from './kit';
-import { createPattern, isHit, seed, type Pattern } from './pattern';
+import { createPattern, hitAt, isHit, seed, type Pattern } from './pattern';
 import { createSketchpad, type PatternStore, type Playback } from './sketchpad.svelte';
 
 /**
@@ -148,6 +148,63 @@ describe('drawing', () => {
     expect(playback.patterns).toEqual([]);
     expect(savedEdits(store)).toEqual([]);
   });
+
+  it('clears a cell however it is struck', () => {
+    const { sketchpad } = setup(createPattern());
+
+    sketchpad.setHit('snare', 4, 'accent');
+    sketchpad.toggle('snare', 4);
+
+    expect(isHit(sketchpad.pattern, 'snare', 4)).toBe(false);
+  });
+});
+
+describe('striking a cell a named way', () => {
+  it('places a variation on an empty cell and pushes it onward', () => {
+    const { sketchpad, store, playback } = setup(createPattern());
+
+    sketchpad.setHit('snare', 4, 'accent');
+
+    expect(hitAt(sketchpad.pattern, 'snare', 4)).toBe('accent');
+    expect(playback.patterns).toEqual([sketchpad.pattern]);
+    expect(savedEdits(store)).toEqual([sketchpad.pattern]);
+  });
+
+  it('swaps one variation for another in a single action', () => {
+    const { sketchpad } = setup(createPattern());
+
+    sketchpad.setHit('snare', 4, 'accent');
+    sketchpad.setHit('snare', 4, 'ghost');
+
+    expect(hitAt(sketchpad.pattern, 'snare', 4)).toBe('ghost');
+  });
+
+  /**
+   * The refusal costs nothing downstream — no autosave, no sequence rebuild — because the
+   * setter hands the same pattern back and `commit` stops there.
+   */
+  it('lets a variation the drum does not accept change nothing', () => {
+    const { sketchpad, store, playback } = setup(createPattern());
+    const before = sketchpad.pattern;
+
+    sketchpad.setHit('crash', 0, 'accent');
+
+    expect(sketchpad.pattern).toBe(before);
+    expect(playback.patterns).toEqual([]);
+    expect(savedEdits(store)).toEqual([]);
+  });
+
+  it('lets setting what the cell already holds change nothing', () => {
+    const { sketchpad, store, playback } = setup(createPattern());
+    sketchpad.setHit('snare', 4, 'accent');
+    const before = sketchpad.pattern;
+
+    sketchpad.setHit('snare', 4, 'accent');
+
+    expect(sketchpad.pattern).toBe(before);
+    expect(playback.patterns).toHaveLength(1);
+    expect(savedEdits(store)).toHaveLength(1);
+  });
 });
 
 describe('tempo', () => {
@@ -181,7 +238,7 @@ describe('clearing', () => {
     sketchpad.clear();
 
     const { pattern } = sketchpad;
-    expect(KIT.every(({ id }) => pattern.rows[id].every((on) => !on))).toBe(true);
+    expect(KIT.every(({ id }) => pattern.rows[id].every((hit) => hit === 'off'))).toBe(true);
     expect(pattern.bpm).toBe(before.bpm);
     expect(pattern.dimensions).toEqual(before.dimensions);
   });

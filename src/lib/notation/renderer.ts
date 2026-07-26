@@ -1,6 +1,17 @@
 // `vexflow/core` is the library without its six bundled fonts; the two this app draws
 // with are registered by `./fonts`, which this module waits on before it draws.
-import { Beam, Dot, Formatter, Renderer, Stave, StaveNote, Stem, Voice } from 'vexflow/core';
+import {
+  Articulation,
+  Beam,
+  Dot,
+  Formatter,
+  Modifier,
+  Renderer,
+  Stave,
+  StaveNote,
+  Stem,
+  Voice,
+} from 'vexflow/core';
 import type { SVGContext } from 'vexflow/core';
 import { notationFontsReady } from './fonts';
 import type {
@@ -33,6 +44,22 @@ const DURATION_CODES: Record<NoteValue, string> = {
 const STEM_DIRECTIONS: Record<StemDirection, number> = {
   up: Stem.UP,
   down: Stem.DOWN,
+};
+
+/** VexFlow's articulation code for the accent, `>`. */
+const ACCENT = 'a>';
+
+/**
+ * Which side of the staff an accent sits on — above for the hands, below for the feet, so
+ * it never lands in the other part's way.
+ *
+ * The one thing here derived rather than told, and mechanical: it is the same mapping from
+ * the part's stem direction that the table above makes, read for a different glyph. Nothing
+ * musical is being decided — *whether* there is an accent was settled by the engine.
+ */
+const ACCENT_POSITIONS: Record<StemDirection, number> = {
+  up: Modifier.Position.ABOVE,
+  down: Modifier.Position.BELOW,
 };
 
 /**
@@ -74,6 +101,9 @@ function toStaveNote(event: NotationEvent, stemDirection: StemDirection): StaveN
     clef: CLEF,
   });
   if (dots > 0) Dot.buildAndAttach([note], { all: true });
+  if (!isRest && event.accented) {
+    note.addModifier(new Articulation(ACCENT).setPosition(ACCENT_POSITIONS[stemDirection]));
+  }
 
   return note;
 }

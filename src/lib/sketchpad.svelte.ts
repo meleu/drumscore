@@ -17,7 +17,9 @@
 import {
   clear as clearHits,
   setBpm as withBpm,
+  setHit as withHit,
   toggle as toggleHit,
+  type Hit,
   type Pattern,
   type VoiceId,
 } from './pattern';
@@ -60,7 +62,13 @@ export interface Sketchpad {
   readonly playing: boolean;
   /** The column currently sounding; null whenever playback is stopped. */
   readonly currentStep: number | null;
+  /** Left-click: strike an empty cell plainly, or clear one however it is struck. */
   toggle(voice: VoiceId, step: number): void;
+  /**
+   * Strike a cell a named way, whatever it held — what the variation menu picks. A way the
+   * drum does not accept changes nothing, so no caller has to check first.
+   */
+  setHit(voice: VoiceId, step: number, hit: Hit): void;
   setBpm(bpm: number): void;
   clear(): void;
   /** Rejects if the audio context refuses to start, leaving `playing` false. */
@@ -88,8 +96,8 @@ export function createSketchpad({ store, playback: createPlayback }: SketchpadDe
 
   /**
    * The one path a pattern changes by. The operations in `./pattern` hand back the very
-   * same pattern when they decline a change — an out-of-range step, a tempo that would
-   * not move — and that is where those no-ops stop.
+   * same pattern when they decline a change — an out-of-range step, a tempo that would not
+   * move, a variation the drum does not accept — and that is where those no-ops stop.
    */
   function commit(next: Pattern): void {
     if (next === pattern) return;
@@ -112,6 +120,7 @@ export function createSketchpad({ store, playback: createPlayback }: SketchpadDe
     },
 
     toggle: (voice, step) => commit(toggleHit(pattern, voice, step)),
+    setHit: (voice, step, hit) => commit(withHit(pattern, voice, step, hit)),
     setBpm: (bpm) => commit(withBpm(pattern, bpm)),
     clear: () => commit(clearHits(pattern)),
 

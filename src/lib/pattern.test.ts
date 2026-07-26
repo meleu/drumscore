@@ -1,21 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { KIT } from './kit';
+import { KIT, type Hit } from './kit';
 import {
   clear,
   createPattern,
   DEFAULT_DIMENSIONS,
+  hitAt,
   isHit,
   isSupportedGrid,
   seed,
+  setHit,
+  toggle,
   totalSteps,
   type GridDimensions,
   type Pattern,
   type VoiceId,
 } from './pattern';
 
-/** The steps switched on for a voice, in order. */
+/** The steps struck for a voice, in order, however they are struck. */
 function hitSteps(pattern: Pattern, voice: VoiceId): number[] {
-  return pattern.rows[voice].flatMap((on, step) => (on ? [step] : []));
+  return pattern.rows[voice].flatMap((hit, step) => (hit === 'off' ? [] : [step]));
 }
 
 describe('seed', () => {
@@ -40,18 +43,116 @@ describe('seed', () => {
     expect(hitSteps(pattern, 'crash')).toEqual([]);
     expect(hitSteps(pattern, 'ride')).toEqual([]);
   });
+
+  it('strikes every hit plainly — the seed teaches the grid, not the variations', () => {
+    for (const { id } of KIT) {
+      for (const step of hitSteps(pattern, id)) expect(hitAt(pattern, id, step)).toBe('plain');
+    }
+  });
+});
+
+describe('toggle', () => {
+  const empty = createPattern();
+
+  it('strikes an empty cell plainly', () => {
+    expect(hitAt(toggle(empty, 'snare', 4), 'snare', 4)).toBe('plain');
+  });
+
+  /** One gesture always empties a step, so no variation ever takes two clicks to undo. */
+  const struck: Hit[] = ['plain', 'accent', 'ghost', 'flam', 'drag'];
+
+  it.each(struck)('clears a cell holding %s', (hit) => {
+    const pattern = setHit(empty, 'snare', 4, hit);
+
+    expect(hitAt(pattern, 'snare', 4)).toBe(hit);
+    expect(hitAt(toggle(pattern, 'snare', 4), 'snare', 4)).toBe('off');
+  });
+
+  it('leaves a step outside the grid untouched', () => {
+    expect(toggle(empty, 'kick', 999)).toBe(empty);
+    expect(toggle(empty, 'kick', -1)).toBe(empty);
+  });
+
+  it('does not mutate the pattern it is given', () => {
+    toggle(empty, 'snare', 4);
+
+    expect(isHit(empty, 'snare', 4)).toBe(false);
+  });
+});
+
+describe('setHit', () => {
+  const empty = createPattern();
+
+  it('places a variation on an empty cell in one go', () => {
+    expect(hitAt(setHit(empty, 'snare', 4, 'accent'), 'snare', 4)).toBe('accent');
+  });
+
+  it('replaces one variation with another', () => {
+    const accented = setHit(empty, 'snare', 4, 'accent');
+
+    expect(hitAt(setHit(accented, 'snare', 4, 'ghost'), 'snare', 4)).toBe('ghost');
+  });
+
+  it('demotes a variation to a plain hit without clearing it first', () => {
+    const flammed = setHit(empty, 'snare', 4, 'flam');
+
+    expect(hitAt(setHit(flammed, 'snare', 4, 'plain'), 'snare', 4)).toBe('plain');
+  });
+
+  it('empties a cell when asked for silence', () => {
+    const accented = setHit(empty, 'kick', 0, 'accent');
+
+    expect(isHit(setHit(accented, 'kick', 0, 'off'), 'kick', 0)).toBe(false);
+  });
+
+  /**
+   * Every refusal hands back the very pattern it was given, which is what the sketchpad
+   * reads as "nothing happened" — no autosave, no sequence rebuild.
+   */
+  it('refuses a variation the drum does not accept', () => {
+    expect(setHit(empty, 'crash', 0, 'accent')).toBe(empty);
+    expect(setHit(empty, 'kick', 0, 'ghost')).toBe(empty);
+    expect(setHit(empty, 'ride', 0, 'drag')).toBe(empty);
+  });
+
+  it('refuses a step outside the grid', () => {
+    expect(setHit(empty, 'snare', 999, 'accent')).toBe(empty);
+    expect(setHit(empty, 'snare', -1, 'accent')).toBe(empty);
+  });
+
+  it('refuses to set what the cell already holds', () => {
+    const accented = setHit(empty, 'snare', 4, 'accent');
+
+    expect(setHit(accented, 'snare', 4, 'accent')).toBe(accented);
+    expect(setHit(empty, 'snare', 4, 'off')).toBe(empty);
+  });
+
+  it('lets every drum be struck plainly and silenced, the crash included', () => {
+    for (const { id } of KIT) {
+      expect(hitAt(setHit(empty, id, 0, 'plain'), id, 0)).toBe('plain');
+    }
+  });
+
+  it('leaves the rest of the pattern alone', () => {
+    const pattern = setHit(seed(), 'snare', 4, 'accent');
+
+    expect(hitSteps(pattern, 'snare')).toEqual(hitSteps(seed(), 'snare'));
+    expect(hitAt(pattern, 'snare', 12)).toBe('plain');
+    expect(pattern.rows.kick).toEqual(seed().rows.kick);
+  });
 });
 
 describe('clear', () => {
   it('empties every cell while preserving dimensions and tempo', () => {
-    const cleared = clear(seed());
+    // Variations included: starting over has to genuinely start over.
+    const cleared = clear(setHit(seed(), 'snare', 4, 'accent'));
     const steps = totalSteps(cleared.dimensions);
 
     expect(cleared.bpm).toBe(seed().bpm);
     expect(cleared.dimensions).toEqual(seed().dimensions);
     for (const { id } of KIT) {
       for (let step = 0; step < steps; step++) {
-        expect(isHit(cleared, id, step)).toBe(false);
+        expect(hitAt(cleared, id, step)).toBe('off');
       }
     }
   });

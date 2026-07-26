@@ -1,5 +1,5 @@
 import { KIT, type KitVoice } from '$lib/kit';
-import { isHit, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
+import { hitAt, isHit, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
 import {
   VALUES_PER_WHOLE,
   type BeamGroup,
@@ -26,6 +26,10 @@ import {
  * beat and the time until the next hit is filled with rests. That is what turns a grid of
  * 16th-note cells into readable rhythm while keeping the pulse visible, and it is the same
  * treatment for every drum — the crash and the open hi-hat included.
+ *
+ * How a hit is struck reaches the staff as well as its rhythm: an accent becomes a mark on
+ * the note, ORed across the drums sharing that stem, because the mark has one place to go.
+ * A variation never changes a note value, a rest, a dot or a beam.
  *
  * Which drums there are, how each one is written and which part it is written into are the
  * Kit's answers, read from there rather than restated here. What stays is what is true of a
@@ -185,17 +189,19 @@ function restsFor(table: Duration[], part: Part, step: number, length: number): 
   }));
 }
 
-interface Hit {
+/** What one part is struck with at one step: the drums, and how the stroke is marked. */
+interface Chord {
   step: number;
   noteheads: Notehead[];
+  accented: boolean;
 }
 
 /**
- * How one hit is written: the longest value that fits the gap to the next hit without
+ * How one chord is written: the longest value that fits the gap to the next one without
  * outlasting its own beat. Drums are struck, so what is left of the gap becomes rests.
  */
-function strokeFor(table: Duration[], hit: Hit, gap: number, beatSteps: number): Duration {
-  return longestFit(table, hit.step, Math.min(gap, beatSteps));
+function strokeFor(table: Duration[], chord: Chord, gap: number, beatSteps: number): Duration {
+  return longestFit(table, chord.step, Math.min(gap, beatSteps));
 }
 
 const DIATONIC: readonly string[] = ['c', 'd', 'e', 'f', 'g', 'a', 'b'];
@@ -224,19 +230,32 @@ function noteheadsAt(pattern: Pattern, voices: readonly KitVoice[], at: number):
   return [...heads.values()].sort((a, b) => heightOf(a.position) - heightOf(b.position));
 }
 
-/** The hits of one part within one bar, at steps relative to that bar. */
-function hitsIn(pattern: Pattern, part: Part, bar: number, barLength: number): Hit[] {
+/**
+ * Whether the stroke at one step is accented: true if *any* of the drums struck there is.
+ *
+ * The staff has one place to put the mark, so the drums under one stem cannot disagree on
+ * the page — an accented snare beside a plain hi-hat draws as one accented note. That is
+ * how drum charts are written, and the Pattern keeps which drum was meant (ADR-0014).
+ */
+function accentedAt(pattern: Pattern, voices: readonly KitVoice[], at: number): boolean {
+  return voices.some((voice) => hitAt(pattern, voice.id, at) === 'accent');
+}
+
+/** The chords of one part within one bar, at steps relative to that bar. */
+function chordsIn(pattern: Pattern, part: Part, bar: number, barLength: number): Chord[] {
   const voices = voicesOf(part);
-  const hits: Hit[] = [];
+  const chords: Chord[] = [];
 
   for (let step = 0; step < barLength; step += 1) {
     const at = bar * barLength + step;
     const noteheads = noteheadsAt(pattern, voices, at);
 
-    if (noteheads.length > 0) hits.push({ step, noteheads });
+    if (noteheads.length > 0) {
+      chords.push({ step, noteheads, accented: accentedAt(pattern, voices, at) });
+    }
   }
 
-  return hits;
+  return chords;
 }
 
 /** The note values worth beaming: everything shorter than a beat carries a flag. */
@@ -287,24 +306,25 @@ interface Tables {
 function partFor(pattern: Pattern, part: Part, bar: number, tables: Tables): NotationPart {
   const { stepsPerBeat } = pattern.dimensions;
   const barLength = stepsPerBar(pattern.dimensions);
-  const hits = hitsIn(pattern, part, bar, barLength);
+  const chords = chordsIn(pattern, part, bar, barLength);
 
   const events: NotationEvent[] = [];
   let filled = 0;
 
-  for (const [index, hit] of hits.entries()) {
-    // Notes stop at the bar line; a hit's tail never carries into the next measure.
-    const until = hits[index + 1]?.step ?? barLength;
-    const stroke = strokeFor(tables.note, hit, until - hit.step, stepsPerBeat);
+  for (const [index, chord] of chords.entries()) {
+    // Notes stop at the bar line; a stroke's tail never carries into the next measure.
+    const until = chords[index + 1]?.step ?? barLength;
+    const stroke = strokeFor(tables.note, chord, until - chord.step, stepsPerBeat);
 
-    events.push(...restsFor(tables.rest, part, filled, hit.step - filled), {
+    events.push(...restsFor(tables.rest, part, filled, chord.step - filled), {
       kind: 'note',
-      step: hit.step,
+      step: chord.step,
       value: stroke.value,
       dots: stroke.dots,
-      noteheads: hit.noteheads,
+      noteheads: chord.noteheads,
+      accented: chord.accented,
     });
-    filled = hit.step + stroke.steps;
+    filled = chord.step + stroke.steps;
   }
 
   events.push(...restsFor(tables.rest, part, filled, barLength - filled));

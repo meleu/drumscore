@@ -57,6 +57,15 @@ export interface NotationNote {
   dots: number;
   /** The drums struck together here, low to high. More than one is a chord. */
   noteheads: Notehead[];
+  /**
+   * Whether the stroke is marked with an accent.
+   *
+   * On the note rather than on a notehead because that is where the glyph goes: one `>`
+   * against the stem, whichever of the drums below it was the accented one. The engine ORs
+   * it across them, so this is deliberately lossy and the Pattern is where the full truth
+   * stays (ADR-0014).
+   */
+  accented: boolean;
 }
 
 export interface NotationRest {

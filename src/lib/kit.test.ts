@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DISPLAY_ORDER, KIT, type VoiceId } from './kit';
+import {
+  accepts,
+  DISPLAY_ORDER,
+  HIT_LABELS,
+  KIT,
+  type Hit,
+  type Variation,
+  type VoiceId,
+} from './kit';
 
 /**
  * The canonical order, written out.
@@ -42,6 +50,54 @@ describe('the kit rows', () => {
       expect(notehead.position.step).toMatch(/^[a-g]$/);
       expect(Number.isInteger(notehead.position.octave)).toBe(true);
     }
+  });
+});
+
+/**
+ * ADR-0013's table, written out.
+ *
+ * The rows are the only statement of this fact in the codebase, so this is where it is
+ * checked against the decision rather than against itself. Taking a variation off a row
+ * makes every share link carrying it decode to `null`, which is a deliberate act and has to
+ * be a deliberate edit here too.
+ */
+const ACCEPTED: Record<VoiceId, Variation[]> = {
+  kick: ['accent'],
+  snare: ['accent', 'ghost', 'flam', 'drag'],
+  closedHiHat: ['accent'],
+  openHiHat: ['accent'],
+  crash: [],
+  ride: ['accent'],
+};
+
+describe('the variations each voice accepts', () => {
+  it('matches the table the decision records', () => {
+    expect(Object.fromEntries(KIT.map(({ id, variations }) => [id, variations]))).toEqual(ACCEPTED);
+  });
+
+  it.each(KIT)('lets $label be silent and struck plainly', ({ id }) => {
+    expect(accepts(id, 'off')).toBe(true);
+    expect(accepts(id, 'plain')).toBe(true);
+  });
+
+  it.each(KIT)('answers for $label exactly what its row says', ({ id }) => {
+    const variations: Variation[] = ['accent', 'ghost', 'flam', 'drag'];
+
+    for (const variation of variations) {
+      expect(accepts(id, variation)).toBe(ACCEPTED[id].includes(variation));
+    }
+  });
+
+  it('gives the snare every variation and the crash none', () => {
+    expect(accepts('snare', 'drag')).toBe(true);
+    expect(accepts('crash', 'accent')).toBe(false);
+    expect(accepts('ride', 'ghost')).toBe(false);
+  });
+
+  it('names every way a drum can be struck', () => {
+    const hits: Hit[] = ['off', 'plain', 'accent', 'ghost', 'flam', 'drag'];
+
+    for (const hit of hits) expect(HIT_LABELS[hit]).not.toBe('');
   });
 });
 

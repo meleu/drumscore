@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { decode, encode } from './codec';
-import { KIT } from './kit';
+import { KIT, type Hit } from './kit';
 import {
   createPattern,
   DEFAULT_DIMENSIONS,
   seed,
   setBpm,
+  setHit,
   toggle,
   totalSteps,
   type GridDimensions,
   type Pattern,
+  type VoiceId,
 } from './pattern';
 
 /** Every cell switched on — the densest round-trip case. */
@@ -24,11 +26,31 @@ function fullPattern(): Pattern {
   return pattern;
 }
 
+/** One of each variation the snare accepts, plus an accent on a drum in the other part. */
+function variedPattern(): Pattern {
+  const marks: [VoiceId, number, Hit][] = [
+    ['snare', 4, 'accent'],
+    ['snare', 6, 'ghost'],
+    ['snare', 12, 'flam'],
+    ['snare', 14, 'drag'],
+    ['kick', 0, 'accent'],
+    ['closedHiHat', 2, 'accent'],
+    ['ride', 8, 'accent'],
+  ];
+
+  return marks.reduce(
+    (pattern, [voice, step, hit]) => setHit(pattern, voice, step, hit),
+    createPattern(),
+  );
+}
+
 describe('encode/decode round-trip', () => {
   const cases: Record<string, Pattern> = {
     empty: createPattern(),
     full: fullPattern(),
     seeded: seed(),
+    varied: variedPattern(),
+    'seeded with a variation': setHit(seed(), 'snare', 4, 'accent'),
     'slow bpm': setBpm(seed(), 40),
     'fast bpm': setBpm(seed(), 240),
     'mid bpm': setBpm(seed(), 137),
@@ -43,25 +65,39 @@ describe('encode/decode round-trip', () => {
   it('produces a compact, URL-safe string', () => {
     const encoded = encode(seed());
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
-    // 6-byte header + 24 cell bytes = 30 bytes -> 40 base64 chars.
-    expect(encoded.length).toBeLessThan(64);
-  });
-
-  /**
-   * Strings captured from the encoder before the Pattern took over the dimension check,
-   * frozen here so a shared link or an autosave from before that change is proved to decode
-   * to the identical pattern rather than merely believed to. Nothing about the format moved,
-   * so nothing about these should ever move either.
-   */
-  it('decodes strings encoded before the dimension check moved', () => {
-    expect(decode('AQQEBAJkgICAgAgICAiqqqqqAAAAAAAAAAAAAAAA')).toEqual(seed());
-    expect(decode('AQQEBAKJgICAgAgICAiqqqqqAAAAAAAAAAAAAAAA')).toEqual(setBpm(seed(), 137));
+    // 6-byte header + 6 voices x 32 steps at half a byte each = 102 bytes -> 136 base64
+    // chars. Four times the width version 1 wrote, and still short enough to paste anywhere.
+    expect(encoded).toHaveLength(136);
   });
 
   it('distinguishes patterns that differ by a single cell', () => {
     const a = createPattern();
     const b = toggle(a, 'snare', 5);
     expect(encode(a)).not.toEqual(encode(b));
+  });
+
+  it('distinguishes cells that differ only in how they are struck', () => {
+    const plain = setHit(createPattern(), 'snare', 5, 'plain');
+
+    expect(encode(plain)).not.toEqual(encode(setHit(plain, 'snare', 5, 'accent')));
+  });
+
+  /**
+   * Strings captured from this version's encoder, frozen so that a link shared today is
+   * proved to still decode to the identical pattern tomorrow rather than merely believed
+   * to. They may only change when `FORMAT_VERSION` does.
+   */
+  it('decodes the strings this format version writes', () => {
+    expect(
+      decode(
+        'AgQEBAJkEAAAABAAAAAQAAAAEAAAAAAAEAAAABAAAAAQAAAAEAAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      ),
+    ).toEqual(seed());
+    expect(
+      decode(
+        'AgQEBAJkEAAAABAAAAAQAAAAEAAAAAAAIAAAABAAAAAQAAAAEAAQEBAQEBAQEBAQEBAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+      ),
+    ).toEqual(setHit(seed(), 'snare', 4, 'accent'));
   });
 });
 
@@ -108,6 +144,39 @@ describe('decode tolerance', () => {
       expect(decode(linkFor(dimensions))).toBeNull();
     });
   }
+
+  /**
+   * The nibble layout arrived with version 2, so every string written before it is read as
+   * a grid it cannot be — and that is the whole migration story: those links and autosaves
+   * fall back to the next source, and no reader for them is written (ADR-0012).
+   */
+  it('returns null for a string the previous format version wrote', () => {
+    expect(decode('AQQEBAJkgICAgAgICAiqqqqqAAAAAAAAAAAAAAAA')).toBeNull();
+  });
+
+  /**
+   * The header is six bytes — exactly two base64 groups — so the cells begin at character 8,
+   * and on an empty pattern every one of them is 'A'. '8' puts 0xF0 in the first cell byte:
+   * nibble 15, a code no way of striking a drum has.
+   */
+  it('returns null for a cell code that means nothing', () => {
+    const empty = encode(createPattern());
+
+    expect(decode(empty.slice(0, 8) + '8' + empty.slice(9))).toBeNull();
+  });
+
+  /**
+   * A dragged crash is drawable nonsense, so a hand-made link carrying one is malformed
+   * input rather than a pattern to be repaired (ADR-0013). Built by writing the row
+   * directly, because `setHit` is one of the doors that refuses it.
+   */
+  it('returns null for a variation the drum does not accept', () => {
+    const base = createPattern();
+    const crash = [...base.rows.crash];
+    crash[0] = 'drag';
+
+    expect(decode(encode({ ...base, rows: { ...base.rows, crash } }))).toBeNull();
+  });
 
   it('returns null when the version byte is unknown', () => {
     // 'B' -> value 1 in our alphabet; a leading version of 2 would start elsewhere.

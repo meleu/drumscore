@@ -2,7 +2,7 @@
  * The pattern codec: a compact, URL-safe string form of a {@link Pattern}.
  *
  * The pattern state is tiny — a handful of grid dimensions, one BPM, and
- * `voices x steps` on/off bits — so it round-trips comfortably inside a URL. That
+ * `voices x steps` cells of half a byte each — so it round-trips comfortably inside a URL. That
  * makes a single encoding serve two jobs: the "copy link" share format and the
  * localStorage autosave format.
  *
@@ -14,15 +14,16 @@
  */
 
 /**
- * The Kit, named at the import because this format is built out of two of its properties:
- * rows are encoded in canonical order, and the payload is `voices x steps` bits wide.
+ * The Kit, named at the import because this format is built out of three of its properties:
+ * rows are encoded in canonical order, the payload is `voices x steps` cells wide, and which
+ * cells are real is the Kit's answer rather than the format's.
  *
  * Adding or removing a voice therefore changes the payload width, which breaks every
  * string the old kit encoded — share links and autosaves alike. That breakage is accepted:
  * the kit is expected to grow, and no migration path is built. The format version below is
  * not what rescues those strings, and bumping it would not.
  */
-import { KIT, type VoiceId } from './kit';
+import { accepts, KIT, type Hit, type VoiceId } from './kit';
 import {
   createPattern,
   isSupportedGrid,
@@ -33,11 +34,48 @@ import {
   type Pattern,
 } from './pattern';
 
-/** Bumped only on a breaking change to the byte layout; old strings then decode to `null`. */
-const FORMAT_VERSION = 1;
+/**
+ * Bumped only on a breaking change to the byte layout; old strings then decode to `null`.
+ *
+ * Version 2 widened a cell from a bit to a nibble to carry the variation. No reader for
+ * version 1 is written: those strings fall back to the autosave and then to the seed, and a
+ * reader bought today would not survive the next voice the kit gains anyway.
+ */
+const FORMAT_VERSION = 2;
 
 /** version + stepsPerBeat + beatsPerBar + beatValue + bars + bpm, one byte each. */
 const HEADER_LENGTH = 6;
+
+/**
+ * A cell on the wire: one nibble, two to a byte, so nothing straddles a byte boundary.
+ *
+ * Sixteen codes for six states is deliberate headroom — the cymbal choke is already named
+ * (ADR-0013) and lands without touching the layout. The numbers are the format, so changing
+ * one silently rewrites the meaning of every string ever shared; `codec.test.ts` pins them.
+ *
+ * A record rather than a list, so a `Hit` added to the union without a code here is a
+ * compile error rather than a cell that encodes as something else.
+ */
+const CELL_CODES: Record<Hit, number> = {
+  off: 0,
+  plain: 1,
+  accent: 2,
+  ghost: 3,
+  flam: 4,
+  drag: 5,
+};
+
+/** The same table read the other way. Codes with no entry are not cells, and reject. */
+const HITS_BY_CODE: ReadonlyMap<number, Hit> = new Map(
+  Object.entries(CELL_CODES).map(([hit, code]) => [code, hit as Hit]),
+);
+
+/** Two cells to a byte: the even one in the high nibble, so a dump reads left to right. */
+const CELLS_PER_BYTE = 2;
+
+function cellBytesFor(steps: number): number {
+  return Math.ceil((steps * KIT.length) / CELLS_PER_BYTE);
+}
 
 const BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -46,15 +84,14 @@ export function encode(pattern: Pattern): string {
   const { dimensions, bpm, rows } = pattern;
   const steps = totalSteps(dimensions);
 
-  const cellBytes = new Uint8Array(Math.ceil((steps * KIT.length) / 8));
-  let bit = 0;
+  const cellBytes = new Uint8Array(cellBytesFor(steps));
+  let cell = 0;
   for (const voice of KIT) {
     const row = rows[voice.id];
-    for (let step = 0; step < steps; step++, bit++) {
-      if (row[step]) {
-        const index = bit >> 3;
-        cellBytes[index] = (cellBytes[index] ?? 0) | (0x80 >> (bit & 7));
-      }
+    for (let step = 0; step < steps; step++, cell++) {
+      const code = CELL_CODES[row[step] ?? 'off'];
+      const index = cell >> 1;
+      cellBytes[index] = (cellBytes[index] ?? 0) | (cell % 2 === 0 ? code << 4 : code);
     }
   }
 
@@ -95,20 +132,26 @@ export function decode(encoded: string | null | undefined): Pattern | null {
   if (!isSupportedGrid(dimensions)) return null;
 
   const steps = totalSteps(dimensions);
-  const expectedLength = HEADER_LENGTH + Math.ceil((steps * KIT.length) / 8);
+  const expectedLength = HEADER_LENGTH + cellBytesFor(steps);
   if (bytes.length !== expectedLength) return null;
 
   const pattern = createPattern(dimensions, clampBpm(bytes[5] ?? MIN_BPM));
   const rows = Object.fromEntries(
-    KIT.map((voice) => [voice.id, new Array<boolean>(steps).fill(false)]),
-  ) as Record<VoiceId, boolean[]>;
+    KIT.map((voice) => [voice.id, new Array<Hit>(steps).fill('off')]),
+  ) as Record<VoiceId, Hit[]>;
 
-  let bit = 0;
+  let cell = 0;
   for (const voice of KIT) {
     const row = rows[voice.id];
-    for (let step = 0; step < steps; step++, bit++) {
-      const byte = bytes[HEADER_LENGTH + (bit >> 3)] ?? 0;
-      row[step] = (byte & (0x80 >> (bit & 7))) !== 0;
+    for (let step = 0; step < steps; step++, cell++) {
+      const byte = bytes[HEADER_LENGTH + (cell >> 1)] ?? 0;
+      const hit = HITS_BY_CODE.get(cell % 2 === 0 ? byte >> 4 : byte & 0x0f);
+
+      // A code nothing decodes to, or a way this drum cannot be struck, and the whole
+      // string is malformed — the same answer an unsupported grid gets. Decoding yields
+      // only patterns the app considers valid; there is no repair step (ADR-0013).
+      if (hit === undefined || !accepts(voice.id, hit)) return null;
+      row[step] = hit;
     }
   }
 

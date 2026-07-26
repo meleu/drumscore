@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   createPattern,
   isSupportedGrid,
+  setHit,
   stepsPerBar,
   toggle,
   totalSteps,
   type GridDimensions,
+  type Hit,
   type Pattern,
   type VoiceId,
 } from '$lib/pattern';
@@ -293,8 +295,110 @@ describe('parts', () => {
     expect(hands.events).toEqual([
       { kind: 'rest', step: 0, value: 'half', dots: 0, position: { step: 'b', octave: 4 } },
       { kind: 'rest', step: 8, value: 'quarter', dots: 0, position: { step: 'b', octave: 4 } },
-      { kind: 'note', step: 12, value: 'quarter', dots: 0, noteheads: [SNARE] },
+      { kind: 'note', step: 12, value: 'quarter', dots: 0, noteheads: [SNARE], accented: false },
     ]);
+  });
+});
+
+/**
+ * Which notes carry an accent mark, asserted as plain data.
+ *
+ * The interesting cases are all chords, because the snare shares the hands part with every
+ * cymbal: the mark has one place to go, so the engine ORs the accent across the drums under
+ * one stem and the staff says nothing about which of them was meant (ADR-0014).
+ */
+describe('accents', () => {
+  /** Strike some cells a named way over a pattern already carrying plain hits. */
+  function struck(hits: Partial<Record<VoiceId, number[]>>, marks: [VoiceId, number, Hit][]) {
+    return marks.reduce(
+      (pattern, [voice, step, hit]) => setHit(pattern, voice, step, hit),
+      patternWith(hits),
+    );
+  }
+
+  /** Which steps of a part's first measure are written with an accent. */
+  function accentedSteps(pattern: Pattern, id: PartId): number[] {
+    return partOf(measureOf(pattern), id)
+      .events.filter((event) => event.kind === 'note' && event.accented)
+      .map(({ step }) => step);
+  }
+
+  it('marks no note when nothing is accented', () => {
+    expect(accentedSteps(patternWith({ snare: [4, 12] }), 'hands')).toEqual([]);
+  });
+
+  it('marks the accented hand stroke and no other', () => {
+    const pattern = struck({ snare: [4, 12] }, [['snare', 4, 'accent']]);
+
+    expect(accentedSteps(pattern, 'hands')).toEqual([4]);
+  });
+
+  it('marks an accented foot stroke in the feet part alone', () => {
+    const pattern = struck({ kick: [0, 8], snare: [4] }, [['kick', 0, 'accent']]);
+
+    expect(accentedSteps(pattern, 'feet')).toEqual([0]);
+    expect(accentedSteps(pattern, 'hands')).toEqual([]);
+  });
+
+  it('marks the whole chord when one of its drums is accented', () => {
+    const pattern = struck({ snare: [0], closedHiHat: [0] }, [['snare', 0, 'accent']]);
+    const note = partOf(measureOf(pattern), 'hands').events[0];
+
+    // One note, both heads, one mark: the hi-hat is drawn accented because it shares the stem.
+    expect(note).toMatchObject({ kind: 'note', noteheads: [SNARE, CLOSED_HI_HAT], accented: true });
+  });
+
+  it('marks the chord whichever of its drums carries the accent', () => {
+    const pattern = struck({ snare: [0], ride: [0] }, [['ride', 0, 'accent']]);
+
+    expect(accentedSteps(pattern, 'hands')).toEqual([0]);
+  });
+
+  it('keeps an accent out of the other part sharing the step', () => {
+    const pattern = struck({ kick: [0], crash: [0] }, [['kick', 0, 'accent']]);
+
+    expect(accentedSteps(pattern, 'feet')).toEqual([0]);
+    expect(accentedSteps(pattern, 'hands')).toEqual([]);
+  });
+
+  it('marks every accented stroke of a busy bar', () => {
+    const hits = { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14] };
+    const pattern = struck(hits, [
+      ['closedHiHat', 0, 'accent'],
+      ['closedHiHat', 8, 'accent'],
+    ]);
+
+    expect(accentedSteps(pattern, 'hands')).toEqual([0, 8]);
+  });
+
+  it('numbers accented steps relative to their own bar', () => {
+    const pattern = struck({ snare: [4, 20] }, [['snare', 20, 'accent']]);
+
+    expect(accentedSteps(pattern, 'hands')).toEqual([]);
+    expect(
+      partOf(measureOf(pattern, 1), 'hands')
+        .events.filter((event) => event.kind === 'note' && event.accented)
+        .map(({ step }) => step),
+    ).toEqual([4]);
+  });
+
+  /** An accent says how a stroke is played, never how long it is. */
+  it('leaves the rhythm, the rests, the dots and the beams exactly as they were', () => {
+    const hits = { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4, 12], kick: [0, 3, 8] };
+    const plain = toNotation(patternWith(hits));
+    const accented = toNotation(
+      struck(hits, [
+        ['snare', 4, 'accent'],
+        ['kick', 3, 'accent'],
+      ]),
+    );
+
+    const rhythms = (model: NotationModel) =>
+      model.measures.map(({ parts }) =>
+        parts.map(({ events, beams }) => [rhythm(events), beams.map((group) => group.steps)]),
+      );
+
+    expect(rhythms(accented)).toEqual(rhythms(plain));
   });
 });
 
@@ -447,8 +551,8 @@ describe('the grids the predicate admits', () => {
   /** A hit on every step of every voice: the most splitting and beaming a grid can ask for. */
   function denselyHit(dimensions: GridDimensions): Pattern {
     const pattern = createPattern(dimensions);
-    const struck = new Array<boolean>(totalSteps(dimensions)).fill(true);
-    const rows: Record<VoiceId, readonly boolean[]> = { ...pattern.rows };
+    const struck = new Array<Hit>(totalSteps(dimensions)).fill('plain');
+    const rows: Record<VoiceId, readonly Hit[]> = { ...pattern.rows };
 
     for (const voice of Object.keys(rows) as VoiceId[]) rows[voice] = struck;
 

@@ -53,6 +53,7 @@
       pattern={sketchpad.pattern}
       currentStep={sketchpad.currentStep}
       ontoggle={sketchpad.toggle}
+      onsethit={sketchpad.setHit}
     />
   </section>
 

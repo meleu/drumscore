@@ -8,15 +8,15 @@
  * Operations are pure: they return a new pattern rather than mutating the old one.
  */
 
-import { KIT, type VoiceId } from './kit';
+import { accepts, KIT, type Hit, type VoiceId } from './kit';
 import { VALUES_PER_WHOLE } from './notation/model';
 
 /**
- * Which drums there are is the Kit's business, not the Pattern's. The type is re-exported
- * because the interfaces below are stated in terms of it; anything that needs the *list*
- * reads `kit.ts` directly.
+ * Which drums there are, and which ways of striking one exist, are the Kit's business
+ * rather than the Pattern's. The types are re-exported because the interfaces below are
+ * stated in terms of them; anything that needs the *list* reads `kit.ts` directly.
  */
-export type { VoiceId };
+export type { Hit, VoiceId };
 
 export interface GridDimensions {
   /** Steps per beat. 4 gives 16th-note resolution. */
@@ -42,8 +42,12 @@ export const MAX_BPM = 240;
 export interface Pattern {
   readonly dimensions: GridDimensions;
   readonly bpm: number;
-  /** One on/off row per voice, each `totalSteps(dimensions)` cells long. */
-  readonly rows: Readonly<Record<VoiceId, readonly boolean[]>>;
+  /**
+   * One row per voice, each `totalSteps(dimensions)` cells long. A cell holds how it is
+   * struck, `'off'` included, so silence needs no separate representation and a variation
+   * needs no second structure to live in.
+   */
+  readonly rows: Readonly<Record<VoiceId, readonly Hit[]>>;
 }
 
 export function stepsPerBar(dimensions: GridDimensions): number {
@@ -110,14 +114,20 @@ export function createPattern(
 ): Pattern {
   const steps = totalSteps(dimensions);
   const rows = Object.fromEntries(
-    KIT.map((voice) => [voice.id, new Array<boolean>(steps).fill(false)]),
-  ) as Record<VoiceId, boolean[]>;
+    KIT.map((voice) => [voice.id, new Array<Hit>(steps).fill('off')]),
+  ) as Record<VoiceId, Hit[]>;
 
   return { dimensions, bpm, rows };
 }
 
+/** How this cell is struck. A step outside the grid is silent, like an empty one. */
+export function hitAt(pattern: Pattern, voice: VoiceId, step: number): Hit {
+  return pattern.rows[voice][step] ?? 'off';
+}
+
+/** Is this cell struck at all? The question everything that ignores the variation asks. */
 export function isHit(pattern: Pattern, voice: VoiceId, step: number): boolean {
-  return pattern.rows[voice][step] ?? false;
+  return hitAt(pattern, voice, step) !== 'off';
 }
 
 /**
@@ -131,15 +141,35 @@ export function setBpm(pattern: Pattern, bpm: number): Pattern {
   return { ...pattern, bpm: clamped };
 }
 
-/** Flip one cell. Out-of-range steps leave the pattern untouched. */
-export function toggle(pattern: Pattern, voice: VoiceId, step: number): Pattern {
+/**
+ * Strike one cell this way, or silence it with `'off'`.
+ *
+ * Refuses, by handing back the pattern it was given, a step outside the grid and a
+ * variation the drum does not accept — one refusal, one shape, so the sketchpad's
+ * identity-means-no-change rule covers both (ADR-0013). Setting what the cell already
+ * holds is a refusal too, for the same reason.
+ */
+export function setHit(pattern: Pattern, voice: VoiceId, step: number, hit: Hit): Pattern {
   const row = pattern.rows[voice];
   if (step < 0 || step >= row.length) return pattern;
+  if (!accepts(voice, hit)) return pattern;
+  if (row[step] === hit) return pattern;
 
   const next = [...row];
-  next[step] = !next[step];
+  next[step] = hit;
 
   return { ...pattern, rows: { ...pattern.rows, [voice]: next } };
+}
+
+/**
+ * Flip one cell between silent and an ordinary stroke — what a left-click does.
+ *
+ * Two states, whatever the cell holds: a struck cell of any kind clears. A cell holds one
+ * value with no history behind it, so there is nothing for a click on a flam to demote to
+ * except a plain hit, and that would make one gesture mean two things (ADR-0012).
+ */
+export function toggle(pattern: Pattern, voice: VoiceId, step: number): Pattern {
+  return setHit(pattern, voice, step, isHit(pattern, voice, step) ? 'off' : 'plain');
 }
 
 /** Empty every cell, preserving dimensions and tempo. */
@@ -151,6 +181,8 @@ export function clear(pattern: Pattern): Pattern {
  * The default beat a fresh visitor lands on: a basic rock groove — closed hi-hat on
  * every 8th, kick on beats 1 & 3, snare on beats 2 & 4 — laid out from the grid
  * dimensions rather than hard-coded step numbers so it survives a resolution change.
+ *
+ * Plain hits throughout. What the seed teaches is the grid, not the variations.
  */
 export function seed(
   dimensions: GridDimensions = DEFAULT_DIMENSIONS,
@@ -168,15 +200,15 @@ export function seed(
   // A hi-hat every eighth note: one hit every half-beat's worth of steps.
   const hiHatEvery = Math.max(1, Math.round(stepsPerBeat / 2));
   for (let step = 0; step < rows.closedHiHat.length; step += hiHatEvery) {
-    rows.closedHiHat[step] = true;
+    rows.closedHiHat[step] = 'plain';
   }
 
   for (let bar = 0; bar < bars; bar++) {
     for (let beat = 0; beat < beatsPerBar; beat++) {
       const step = (bar * beatsPerBar + beat) * stepsPerBeat;
       // Beats 1 & 3 (even index) get the kick; beats 2 & 4 (odd index) get the snare.
-      if (beat % 2 === 0) rows.kick[step] = true;
-      else rows.snare[step] = true;
+      if (beat % 2 === 0) rows.kick[step] = 'plain';
+      else rows.snare[step] = 'plain';
     }
   }
 
