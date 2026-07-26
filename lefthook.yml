@@ -6,6 +6,9 @@
 # a top-level key like `pre-push` — since that needs a new shim on disk.
 
 pre-commit:
+  exclude:
+    - '*.md'
+
   # Jobs run top to bottom, and `piped` aborts at the first failure: no point
   # formatting code that does not lint, or verifying a tree we already know is
   # broken. The order is load-bearing — `eslint --fix` rewrites code, so
