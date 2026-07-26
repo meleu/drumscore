@@ -1,0 +1,6 @@
+# pnpm blocks dependencies' install scripts by default. Lefthook's postinstall
+# is the thing that writes .git/hooks, so without this opt-in a fresh clone gets
+# the binary but no hooks — and commits skip the pre-commit checks silently.
+# The script only runs `lefthook install -f`, and skips itself on CI.
+allowBuilds:
+  lefthook: true
