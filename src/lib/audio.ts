@@ -18,8 +18,8 @@ import {
   Sequence,
   start,
 } from 'tone';
-import { KIT, type VoiceId } from './kit';
-import { isHit, totalSteps, type Pattern } from './pattern';
+import { HIT_LOUDNESS, KIT, type VoiceId } from './kit';
+import { hitAt, totalSteps, type Pattern } from './pattern';
 import type { Playback } from './sketchpad.svelte';
 
 /** Notified of the playing column; `null` when playback stops. */
@@ -29,9 +29,12 @@ export type StepListener = (step: number | null) => void;
  * One trigger per voice plus a disposer for every Tone node created. Exhaustive over the
  * Kit deliberately: a new drum with no synth here is a compile error, not a silent drum.
  * Envelopes, filters and volumes stay this side of the seam.
+ *
+ * A trigger is struck at a loudness as well as at a time — the whole of how a variation
+ * sounds. Nothing else varies per hit: no envelope, no filter, no synth parameter.
  */
 interface VoiceKit {
-  triggers: Record<VoiceId, (time: number) => void>;
+  triggers: Record<VoiceId, (time: number, loudness: number) => void>;
   dispose(): void;
 }
 
@@ -90,13 +93,13 @@ function buildVoices(): VoiceKit {
     }),
   ).connect(destination);
 
-  const triggers: Record<VoiceId, (time: number) => void> = {
-    kick: (time) => kick.triggerAttackRelease('C1', '8n', time),
-    snare: (time) => snare.triggerAttackRelease('8n', time),
-    closedHiHat: (time) => closedHiHat.triggerAttackRelease('16n', time),
-    openHiHat: (time) => openHiHat.triggerAttackRelease('8n', time),
-    crash: (time) => crash.triggerAttackRelease('C4', '2n', time),
-    ride: (time) => ride.triggerAttackRelease('C6', '8n', time),
+  const triggers: VoiceKit['triggers'] = {
+    kick: (time, loudness) => kick.triggerAttackRelease('C1', '8n', time, loudness),
+    snare: (time, loudness) => snare.triggerAttackRelease('8n', time, loudness),
+    closedHiHat: (time, loudness) => closedHiHat.triggerAttackRelease('16n', time, loudness),
+    openHiHat: (time, loudness) => openHiHat.triggerAttackRelease('8n', time, loudness),
+    crash: (time, loudness) => crash.triggerAttackRelease('C4', '2n', time, loudness),
+    ride: (time, loudness) => ride.triggerAttackRelease('C6', '8n', time, loudness),
   };
 
   return { triggers, dispose: () => nodes.forEach((node) => node.dispose()) };
@@ -162,8 +165,10 @@ export class AudioEngine implements Playback {
 
     this.sequence = new Sequence<number>(
       (time, step) => {
+        // Read per pass, not per rebuild: a cell edited mid-loop is heard on the next one.
         for (const { id } of KIT) {
-          if (isHit(this.pattern, id, step)) this.voices.triggers[id](time);
+          const hit = hitAt(this.pattern, id, step);
+          if (hit !== 'off') this.voices.triggers[id](time, HIT_LOUDNESS[hit]);
         }
         // The callback fires ahead of the audible moment; Draw defers the highlight to it,
         // so the playhead lands in sync. The guard drops draws due after a stop.

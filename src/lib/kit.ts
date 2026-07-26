@@ -6,8 +6,10 @@
  * ids, the codec its bit order, the notation engine its noteheads and parts, the grid its
  * labels and row order.
  *
- * What is not true of the drum itself stays out: synth volume and filtering belong to the
- * audio engine, rest positions to the Part. Borrows `Notehead`/`PartId` from the notation
+ * What is not true of the drum itself stays out: how a drum is synthesized — its voice's
+ * volume, its filtering — belongs to the audio engine, rest positions to the Part. How hard
+ * each *way of striking* lands is a fact about the variation rather than about any one drum,
+ * so it sits here with the union it enumerates. Borrows `Notehead`/`PartId` from the notation
  * model rather than the other way round.
  */
 
@@ -35,6 +37,33 @@ export const HIT_LABELS: Record<Hit, string> = {
   ghost: 'Ghost',
   flam: 'Flam',
   drag: 'Drag',
+};
+
+/**
+ * Three loudnesses, 0–1, tuned by ear. Plain sits short of full so an accent has somewhere
+ * louder to go without the mix clipping; a ghost is the same stroke played quietly and
+ * nothing else — no duller timbre.
+ */
+const GHOST_LOUDNESS = 0.35;
+const PLAIN_LOUDNESS = 0.8;
+const ACCENT_LOUDNESS = 1;
+
+/**
+ * How hard each way of striking lands, as the fraction of full force a trigger takes. The
+ * one statement of it: the audio engine reads this rather than deciding, so it stays the
+ * thin adapter it is. Exhaustive over the union, so a new variation is a compile error until
+ * its loudness is named.
+ *
+ * A flam and a drag land as hard as a plain hit — their grace strikes, quiet and ahead of
+ * the beat, are what makes the gesture, not the main stroke's force.
+ */
+export const HIT_LOUDNESS: Record<Hit, number> = {
+  off: 0,
+  plain: PLAIN_LOUDNESS,
+  accent: ACCENT_LOUDNESS,
+  ghost: GHOST_LOUDNESS,
+  flam: PLAIN_LOUDNESS,
+  drag: PLAIN_LOUDNESS,
 };
 
 /** What every Kit row must state; the list below is checked against it. */

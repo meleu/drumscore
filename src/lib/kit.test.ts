@@ -3,6 +3,7 @@ import {
   accepts,
   DISPLAY_ORDER,
   HIT_LABELS,
+  HIT_LOUDNESS,
   KIT,
   type Hit,
   type Variation,
@@ -93,6 +94,35 @@ describe('the variations each voice accepts', () => {
     const hits: Hit[] = ['off', 'plain', 'accent', 'ghost', 'flam', 'drag'];
 
     for (const hit of hits) expect(HIT_LABELS[hit]).not.toBe('');
+  });
+});
+
+describe('how hard each way of striking hits', () => {
+  const struck: Hit[] = ['plain', 'accent', 'ghost', 'flam', 'drag'];
+
+  it('strikes an accent harder than a plain hit, and a plain hit harder than a ghost', () => {
+    expect(HIT_LOUDNESS.ghost).toBeLessThan(HIT_LOUDNESS.plain);
+    expect(HIT_LOUDNESS.plain).toBeLessThan(HIT_LOUDNESS.accent);
+  });
+
+  it('strikes a flam and a drag as hard as a plain hit — the grace strikes carry the gesture', () => {
+    expect(HIT_LOUDNESS.flam).toBe(HIT_LOUDNESS.plain);
+    expect(HIT_LOUDNESS.drag).toBe(HIT_LOUDNESS.plain);
+  });
+
+  it('names three loudnesses and no more', () => {
+    expect(new Set(struck.map((hit) => HIT_LOUDNESS[hit])).size).toBe(3);
+  });
+
+  it('strikes every way audibly, and none beyond what a trigger takes', () => {
+    for (const hit of struck) {
+      expect(HIT_LOUDNESS[hit]).toBeGreaterThan(0);
+      expect(HIT_LOUDNESS[hit]).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('strikes a silent cell not at all', () => {
+    expect(HIT_LOUDNESS.off).toBe(0);
   });
 });
 
