@@ -200,14 +200,14 @@ worth.
 
 ### Acceptance criteria
 
-- [ ] The fixture type carries `dimensions?: GridDimensions`, and the page builds each
+- [x] The fixture type carries `dimensions?: GridDimensions`, and the page builds each
       fixture's pattern on the dimensions it names or the default when it names none.
-- [ ] One fixture is 7/8 at eighth-note beats over one bar, with a stable, filesystem-safe
+- [x] One fixture is 7/8 at eighth-note beats over one bar, with a stable, filesystem-safe
       name.
-- [ ] The baseline is generated and left uncommitted, and the phase is not done until it has
+- [x] The baseline is generated and left uncommitted, and the phase is not done until it has
       been looked at and accepted by hand.
-- [ ] All thirteen existing baseline SVGs are byte-identical.
-- [ ] `pnpm verify:visual` passes with fourteen fixtures and reports no stale baselines.
+- [x] All thirteen existing baseline SVGs are byte-identical.
+- [x] `pnpm verify:visual` passes with fourteen fixtures and reports no stale baselines.
 
 ---
 
