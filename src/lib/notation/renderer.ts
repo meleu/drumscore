@@ -37,7 +37,9 @@ const STEM_DIRECTIONS: Record<StemDirection, number> = {
 
 /**
  * VexFlow reads a notehead as `letter/octave`, optionally followed by a glyph code. `X`
- * is the cross, and it picks the right weight for the note value on its own.
+ * is the cross, and it picks the right weight for the note value on its own. `DI` is the
+ * diamond and behaves the same way, so a ride bell wants `/di` rather than one of the
+ * `/d0`–`/d3` codes, which pin a single weight and would draw a whole note black.
  */
 function keyFor(position: StaffPosition, glyph = ''): string {
   return `${position.step}/${position.octave}${glyph}`;
