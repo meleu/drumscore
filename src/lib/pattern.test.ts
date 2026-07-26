@@ -205,16 +205,17 @@ const VERDICTS: readonly Verdict[] = [
   { what: '2/2 at half-note beats', dimensions: grid(1, 2, 2, 1), supported: true },
   { what: 'one whole note per bar', dimensions: grid(1, 1, 1, 1), supported: true },
   { what: 'the step ceiling exactly', dimensions: grid(4, 4, 4, 256), supported: true },
+  { what: '4/4 at 32nd-note resolution', dimensions: grid(8, 4, 4, 2), supported: true },
+  // 32-per-whole reached via the beat value, so the rule is visibly about the product of
+  // the two rather than about the step count alone.
+  { what: '32nds via the beat value', dimensions: grid(4, 4, 8, 2), supported: true },
 
   // TEMPORARY: triplets, and no value spans a third of a beat. Lifted by tuplet values.
   { what: 'three steps to a beat [TEMPORARY]', dimensions: grid(3, 4, 4, 2), supported: false },
 
-  // TEMPORARY: needs a 32nd — the same failure from the other end.
-  { what: 'eight steps to a beat [TEMPORARY]', dimensions: grid(8, 4, 4, 2), supported: false },
-
-  // TEMPORARY: 32-per-whole reached via the beat value, so the rule is visibly about the
-  // product of the two.
-  { what: '32nds via the beat value [TEMPORARY]', dimensions: grid(4, 4, 8, 2), supported: false },
+  // TEMPORARY: needs a 64th — the same failure from the other end, one level finer now
+  // that the 32nd has landed.
+  { what: 'sixteen steps to a beat [TEMPORARY]', dimensions: grid(16, 4, 4, 2), supported: false },
 
   // Permanent: a grid with a zero in it has nothing to draw.
   { what: 'zero steps per beat', dimensions: grid(0, 4, 4, 2), supported: false },

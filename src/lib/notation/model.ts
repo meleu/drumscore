@@ -5,7 +5,7 @@
  * draw it, which keeps the musical logic pure and testable without a browser.
  */
 
-export type NoteValue = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth';
+export type NoteValue = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth' | 'thirtysecond';
 
 /**
  * How many of each value make a whole note — the whole of what the staff can write.
@@ -20,6 +20,7 @@ export const VALUES_PER_WHOLE: readonly (readonly [NoteValue, number])[] = [
   ['quarter', 4],
   ['eighth', 8],
   ['sixteenth', 16],
+  ['thirtysecond', 32],
 ];
 
 export type DiatonicStep = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g';

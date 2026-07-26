@@ -39,6 +39,7 @@ const DURATION_CODES: Record<NoteValue, string> = {
   quarter: 'q',
   eighth: '8',
   sixteenth: '16',
+  thirtysecond: '32',
 };
 
 const STEM_DIRECTIONS: Record<StemDirection, number> = {

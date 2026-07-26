@@ -82,6 +82,22 @@ export const FIXTURES: readonly Fixture[] = [
     variations: [['snare', 10, 'ghost']],
   },
   {
+    // The grid the thirty-second admitted: one bar of 4/4 with eight steps to the beat. No
+    // control offers this resolution, so a crafted link is the only way a user reaches it,
+    // and this baseline is the only place it is drawn.
+    //
+    // Three beats of eighths lead into a beat of thirty-seconds, so the run is read against
+    // the values around it: the beam over it carries three lines where theirs carry one, and
+    // the feet keep their quarters underneath to say the fill has not disturbed the pulse.
+    name: 'thirty-seconds',
+    dimensions: { stepsPerBeat: 8, beatsPerBar: 4, beatValue: 4, bars: 1 },
+    hits: {
+      closedHiHat: [0, 4, 8, 12, 16, 20],
+      snare: [8, 24, 25, 26, 27, 28, 29, 30, 31],
+      kick: [0, 16],
+    },
+  },
+  {
     // One bar of 7/8 at sixteenth resolution: fourteen steps, the beat an eighth rather than
     // the quarter every other fixture assumes. An odd number of beats is what makes the
     // beaming and the closing rest say something, and the beat value is the half of the meter

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createPattern,
+  DEFAULT_DIMENSIONS,
   isSupportedGrid,
   setHit,
   stepsPerBar,
@@ -23,12 +24,15 @@ import {
   type PartId,
 } from './model';
 
-/** Switch on the listed steps for each voice. */
-function patternWith(hits: Partial<Record<VoiceId, number[]>>): Pattern {
+/** Switch on the listed steps for each voice, on the default grid unless told otherwise. */
+function patternWith(
+  hits: Partial<Record<VoiceId, number[]>>,
+  dimensions?: GridDimensions,
+): Pattern {
   return Object.entries(hits).reduce<Pattern>(
     (pattern, [voice, steps]) =>
       steps.reduce((current, step) => toggle(current, voice as VoiceId, step), pattern),
-    createPattern(),
+    createPattern(dimensions),
   );
 }
 
@@ -40,13 +44,14 @@ function struck(hits: Partial<Record<VoiceId, number[]>>, marks: [VoiceId, numbe
   );
 }
 
-/** How long each value lasts on the default 16th-note grid. */
+/** How long each value lasts on the default 16th-note grid; under a step is unwritable. */
 const STEPS: Record<NoteValue, number> = {
   whole: 16,
   half: 8,
   quarter: 4,
   eighth: 2,
   sixteenth: 1,
+  thirtysecond: 0.5,
 };
 
 const CODES: Record<NoteValue, string> = {
@@ -55,6 +60,7 @@ const CODES: Record<NoteValue, string> = {
   quarter: 'q',
   eighth: '8',
   sixteenth: '16',
+  thirtysecond: '32',
 };
 
 /**
@@ -562,6 +568,64 @@ describe('beaming', () => {
 });
 
 /**
+ * ADR-0011 said a refusal lifts when the vocabulary grows the value it was missing, with no
+ * edit to the predicate. This is the first time that has happened, so it is asserted from
+ * both ends: the value is inert where the app already writes, and it is the whole of what
+ * makes a thirty-second grid writable.
+ */
+describe('the thirty-second note value', () => {
+  /** 4/4 with eight steps to the beat: the grid the value has just admitted. */
+  const THIRTYSECONDS: GridDimensions = {
+    stepsPerBeat: 8,
+    beatsPerBar: 4,
+    beatValue: 4,
+    bars: 1,
+  };
+
+  /** Every note value and rest value the staff writes for this pattern, in the order met. */
+  function valuesIn(pattern: Pattern): NoteValue[] {
+    return toNotation(pattern).measures.flatMap(({ parts }) =>
+      parts.flatMap(({ events }) => events.map(({ value }) => value)),
+    );
+  }
+
+  /** A hit on every step of every voice: the finest writing the grid can provoke. */
+  function everyStep(dimensions: GridDimensions): Partial<Record<VoiceId, number[]>> {
+    const steps = Array.from({ length: totalSteps(dimensions) }, (_, step) => step);
+
+    return Object.fromEntries(
+      (Object.keys(createPattern().rows) as VoiceId[]).map((voice) => [voice, steps]),
+    );
+  }
+
+  it('writes a run of eight to the beat as thirty-seconds', () => {
+    const pattern = patternWith({ closedHiHat: [0, 1, 2, 3, 4, 5, 6, 7] }, THIRTYSECONDS);
+
+    expect(rhythmOf(pattern, 'hands')).toEqual(['32 32 32 32 32 32 32 32 rq rh']);
+  });
+
+  it('beams them by the beat, the way it beams eighths and sixteenths', () => {
+    const pattern = patternWith({ closedHiHat: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] }, THIRTYSECONDS);
+
+    // The beat falls between step 7 and step 8, so the run splits there rather than
+    // running on into one ten-note beam.
+    expect(partOf(measureOf(pattern), 'hands').beams.map(({ steps }) => steps)).toEqual([
+      [0, 1, 2, 3, 4, 5, 6, 7],
+      [8, 9],
+    ]);
+  });
+
+  it('leaves the sixteenth resolution the app ships writing sixteenths', () => {
+    // The rhythm cases above are the fuller pin: every one of them still writes what it
+    // wrote before the value existed. This one says why — the value is half a step long
+    // here, so the vocabulary never offers it.
+    expect(valuesIn(patternWith(everyStep(DEFAULT_DIMENSIONS)))).toEqual(
+      new Array(totalSteps(DEFAULT_DIMENSIONS) * 2).fill('sixteenth'),
+    );
+  });
+});
+
+/**
  * `isSupportedGrid`'s claim, checked against the engine that must honour it: every grid it
  * admits survives the engine's worst case — a hit on every step of every voice, the
  * densest splitting and beaming there is.
@@ -658,9 +722,10 @@ describe('the grids the predicate admits', () => {
   }
 
   it('admits every writable step-and-beat-value pair against every meter in the space', () => {
-    // 15 stepsPerBeat x beatValue pairs multiply to a known value, x16 meters, x2 bar
-    // counts. A number, so a change narrowing or widening the predicate moves it.
-    expect(admitted).toHaveLength(480);
+    // 19 stepsPerBeat x beatValue pairs multiply to a known value, x16 meters, x2 bar
+    // counts. A number, so a change narrowing or widening the predicate moves it: the
+    // thirty-second added the four pairs multiplying to 32, and 128 grids with them.
+    expect(admitted).toHaveLength(608);
   });
 
   it('visits the odd meters and coarse resolutions that already work', () => {
@@ -670,14 +735,19 @@ describe('the grids the predicate admits', () => {
     expect(admitted).toContainEqual({ stepsPerBeat: 2, beatsPerBar: 4, beatValue: 4, bars: 2 });
   });
 
+  it('visits the thirty-second resolutions the vocabulary has just learnt to write', () => {
+    expect(admitted).toContainEqual({ stepsPerBeat: 8, beatsPerBar: 4, beatValue: 4, bars: 1 });
+    expect(admitted).toContainEqual({ stepsPerBeat: 4, beatsPerBar: 4, beatValue: 8, bars: 2 });
+  });
+
   it('does not visit the resolutions the vocabulary cannot write', () => {
     const triplets = admitted.filter(({ stepsPerBeat }) => stepsPerBeat % 3 === 0);
-    const thirtyseconds = admitted.filter(
-      ({ stepsPerBeat, beatValue }) => stepsPerBeat * beatValue === 32,
+    const sixtyfourths = admitted.filter(
+      ({ stepsPerBeat, beatValue }) => stepsPerBeat * beatValue === 64,
     );
 
     expect(triplets).toEqual([]);
-    expect(thirtyseconds).toEqual([]);
+    expect(sixtyfourths).toEqual([]);
   });
 
   it('writes a densely-hit pattern on every one of them', () => {

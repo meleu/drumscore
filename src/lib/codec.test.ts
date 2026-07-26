@@ -132,7 +132,7 @@ describe('decode tolerance', () => {
    */
   const refused: Record<string, GridDimensions> = {
     'three steps to a beat': { stepsPerBeat: 3, beatsPerBar: 4, beatValue: 4, bars: 2 },
-    'eight steps to a beat': { stepsPerBeat: 8, beatsPerBar: 4, beatValue: 4, bars: 2 },
+    'sixteen steps to a beat': { stepsPerBeat: 16, beatsPerBar: 4, beatValue: 4, bars: 2 },
     'a zero in a field': { stepsPerBeat: 4, beatsPerBar: 4, beatValue: 4, bars: 0 },
     '64 in every field': { stepsPerBeat: 64, beatsPerBar: 64, beatValue: 64, bars: 64 },
   };
@@ -142,6 +142,17 @@ describe('decode tolerance', () => {
       expect(decode(linkFor(dimensions))).toBeNull();
     });
   }
+
+  /**
+   * The thirty-second grid the note value has just admitted. No control offers it, so a
+   * crafted link is the only way in, and this is the door it comes through: it used to be
+   * refused beside the triplet grid above.
+   */
+  it('accepts a link asking eight steps to a beat', () => {
+    const dimensions: GridDimensions = { stepsPerBeat: 8, beatsPerBar: 4, beatValue: 4, bars: 2 };
+
+    expect(decode(linkFor(dimensions))?.dimensions).toEqual(dimensions);
+  });
 
   /**
    * The nibble layout arrived with version 2, so pre-v2 strings read as a grid they cannot

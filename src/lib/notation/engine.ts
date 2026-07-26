@@ -243,7 +243,11 @@ function chordsIn(pattern: Pattern, part: Part, bar: number, barLength: number):
 }
 
 /** Worth beaming: everything shorter than a beat carries a flag. */
-const BEAMABLE: ReadonlySet<NoteValue> = new Set<NoteValue>(['eighth', 'sixteenth']);
+const BEAMABLE: ReadonlySet<NoteValue> = new Set<NoteValue>([
+  'eighth',
+  'sixteenth',
+  'thirtysecond',
+]);
 
 /**
  * One beam per beat, the conventional way. A run breaks on anything that cannot join it —
