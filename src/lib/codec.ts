@@ -25,6 +25,7 @@
 import { KIT, type VoiceId } from './kit';
 import {
   createPattern,
+  isSupportedGrid,
   MAX_BPM,
   MIN_BPM,
   totalSteps,
@@ -37,9 +38,6 @@ const FORMAT_VERSION = 1;
 
 /** version + stepsPerBeat + beatsPerBar + beatValue + bars + bpm, one byte each. */
 const HEADER_LENGTH = 6;
-
-/** Guards against a malformed header allocating an absurd grid. */
-const MAX_DIMENSION = 64;
 
 const BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -90,7 +88,10 @@ export function decode(encoded: string | null | undefined): Pattern | null {
     beatValue: bytes[3] ?? 0,
     bars: bytes[4] ?? 0,
   };
-  if (!isValidDimensions(dimensions)) return null;
+  // Which grids exist is the Pattern's question, not the format's. Four bytes decode to
+  // 65,536 grids and the app supports a fraction of them; the format's job is reading the
+  // bytes, so it asks rather than deciding, and a refusal is just another malformed input.
+  if (!isSupportedGrid(dimensions)) return null;
 
   const steps = totalSteps(dimensions);
   const expectedLength = HEADER_LENGTH + Math.ceil((steps * KIT.length) / 8);
@@ -111,12 +112,6 @@ export function decode(encoded: string | null | undefined): Pattern | null {
   }
 
   return { ...pattern, rows };
-}
-
-function isValidDimensions(dimensions: GridDimensions): boolean {
-  return Object.values(dimensions).every(
-    (value) => Number.isInteger(value) && value >= 1 && value <= MAX_DIMENSION,
-  );
 }
 
 function clampBpm(bpm: number): number {

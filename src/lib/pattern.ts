@@ -9,6 +9,7 @@
  */
 
 import { KIT, type VoiceId } from './kit';
+import { VALUES_PER_WHOLE } from './notation/model';
 
 /**
  * Which drums there are is the Kit's business, not the Pattern's. The type is re-exported
@@ -51,6 +52,56 @@ export function stepsPerBar(dimensions: GridDimensions): number {
 
 export function totalSteps(dimensions: GridDimensions): number {
   return stepsPerBar(dimensions) * dimensions.bars;
+}
+
+/**
+ * The capacity guard's bounds. These are **not** a statement about what drumscore presents
+ * well — the staff is one unwrapped line and the grid is one very wide row, so sizes well
+ * under these will look bad long before they are refused. They are protection against a
+ * grid a browser cannot lay out at all.
+ *
+ * Sized past the work they have to survive: 4096 steps is 256 bars of 4/4 sixteenths, about
+ * twice a full-song transcription, and roughly 24k grid cells at the ceiling. Nothing
+ * planned should have to raise them.
+ */
+const MAX_TOTAL_STEPS = 4096;
+const MAX_BARS = 256;
+const MAX_BEATS_PER_BAR = 32;
+
+/**
+ * Is this a grid drumscore supports? The one answer in the codebase to that question.
+ *
+ * Called by the pattern codec, which is the one place an unchecked grid enters the app;
+ * everything downstream — the engine, the grid, the audio engine, the renderer — trusts its
+ * input because of this.
+ */
+export function isSupportedGrid(dimensions: GridDimensions): boolean {
+  // Integrality and a floor of one. The codec feeds this raw bytes, where zero is reachable
+  // and a grid with a zero in it has no steps to draw.
+  if (!Object.values(dimensions).every((value) => Number.isInteger(value) && value >= 1)) {
+    return false;
+  }
+
+  // Writability. Some note value must span exactly one step, or a hit on an off-step has
+  // nothing that can express it and the engine has no way to write the pattern.
+  //
+  // This asks the staff's vocabulary rather than restating what it can write, so the answer
+  // follows the vocabulary rather than drifting from it: the day `VALUES_PER_WHOLE` gains a
+  // 32nd, 32nd-resolution grids become supported here with no edit; the day it gains tuplet
+  // values, triplet resolutions do. There is deliberately no power-of-two test and no list
+  // of allowed numbers — both would be a second, staler copy of the same fact.
+  const stepsPerWhole = dimensions.stepsPerBeat * dimensions.beatValue;
+  if (!VALUES_PER_WHOLE.some(([, perWhole]) => perWhole === stepsPerWhole)) return false;
+
+  // Capacity — the guard, not a product statement. See the bounds above.
+  //
+  // Beats per bar is bounded separately because the other two do not imply it: one bar of
+  // sixty beats at one step each is a tiny grid and an absurd meter.
+  if (totalSteps(dimensions) > MAX_TOTAL_STEPS) return false;
+  if (dimensions.bars > MAX_BARS) return false;
+  if (dimensions.beatsPerBar > MAX_BEATS_PER_BAR) return false;
+
+  return true;
 }
 
 export function createPattern(

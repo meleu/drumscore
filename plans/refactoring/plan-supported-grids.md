@@ -102,26 +102,26 @@ which refusals a future note value will lift.
 
 ### Acceptance criteria
 
-- [ ] `pattern.ts` exports exactly one predicate over `GridDimensions` returning a boolean,
+- [x] `pattern.ts` exports exactly one predicate over `GridDimensions` returning a boolean,
       with each clause commented with the reason it exists.
-- [ ] The writability clause reads the model's vocabulary. There is no power-of-two test,
+- [x] The writability clause reads the model's vocabulary. There is no power-of-two test,
       no ceiling constant, and no list of allowed numbers anywhere in `pattern.ts`.
-- [ ] Adding a shorter value to the vocabulary would widen the supported set with no edit to
+- [x] Adding a shorter value to the vocabulary would widen the supported set with no edit to
       the predicate. Verify by adding `thirtysecond` to the table, checking that a
       32nd-resolution grid becomes supported, and reverting.
-- [ ] `codec.ts` contains no dimension bound of its own: `MAX_DIMENSION` and
+- [x] `codec.ts` contains no dimension bound of its own: `MAX_DIMENSION` and
       `isValidDimensions` are gone, and the predicate is the only dimension check.
-- [ ] `decode` returns `null` for 3 and for 8 steps per beat, for 64 in every field, and for
+- [x] `decode` returns `null` for 3 and for 8 steps per beat, for 64 in every field, and for
       a zero in any field — indistinguishably from any other malformed input.
-- [ ] The capacity bounds sit in one place with their reasoning attached, and admit 4/4
+- [x] The capacity bounds sit in one place with their reasoning attached, and admit 4/4
       sixteenths at 256 bars while refusing 64/64/64/64 and refusing a 60-beat bar.
-- [ ] The Pattern's tests carry a verdict table covering the default grid, at least the
+- [x] The Pattern's tests carry a verdict table covering the default grid, at least the
       known-good odd meters and coarse resolutions, both throwing cases, and the maximal
       grid, with temporary refusals annotated as such.
-- [ ] The codec's existing round-trip tests are unedited and pass, and a string encoded
+- [x] The codec's existing round-trip tests are unedited and pass, and a string encoded
       before this change decodes to the identical Pattern.
-- [ ] `FORMAT_VERSION`, `HEADER_LENGTH` and the bit layout are untouched.
-- [ ] The seed, the default dimensions and everything a first-time visitor sees are
+- [x] `FORMAT_VERSION`, `HEADER_LENGTH` and the bit layout are untouched.
+- [x] The seed, the default dimensions and everything a first-time visitor sees are
       unchanged; `pnpm verify` and `pnpm verify:visual` both pass clean.
 
 ---
