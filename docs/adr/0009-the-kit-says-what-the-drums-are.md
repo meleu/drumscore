@@ -52,3 +52,9 @@ migration built, recorded at the codec's import of the Kit.
 
 **Adding a drum is a row and a synth.** That was the point. A reviewer can tell a change is
 complete by looking at two files, and the compiler names the second one.
+
+A row has since gained the variations its voice accepts (ADR-0013), which is the seam above
+answered in the affirmative: which variations a drum takes is true of the drum. It is also
+the first row field that changes what the codec will _accept_ rather than only how wide its
+payload is — decode asks the Kit whether a variation is legal for that voice, and refuses the
+whole string when it is not.
