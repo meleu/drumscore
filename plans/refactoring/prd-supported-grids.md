@@ -22,7 +22,7 @@ drumscore ships one grid — sixteenths, 4/4, two bars — but **grid dimensions
 the pattern codec will decode any four numbers in the range 1–64 into a Pattern and hand it
 to the rest of the app. The only thing in the codebase that answers the question "which
 grids does drumscore support?" is a byte-plausibility guard inside the wire format, and its
-answer is 65,536 grids. The app draws one of them.
+answer is over sixteen million grids. The app draws one of them.
 
 That gap is not theoretical. Three things reachable from a hand-made link today:
 

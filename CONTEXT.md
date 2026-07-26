@@ -29,8 +29,8 @@ _Avoid_: instrument, drum, track, lane, channel, row
 
 **Kit**:
 Every Voice there is, one row each: what the drum is called, whether it is played by the
-hands or the feet, and how it is written on the staff. The one place where what the user
-draws and what the staff shows are allowed to meet.
+hands or the feet, and how it is written on the staff. It maps what the user draws onto
+what the staff shows, and is the one table that has to keep the two in correspondence.
 _Avoid_: kit piece, drum map, instrument table, drum set
 
 **Step**:
@@ -50,6 +50,9 @@ _Avoid_: measure (reserved for the staff)
 **Grid dimensions**:
 The four numbers that shape the grid — steps per beat, beats per bar, beat value, bars.
 Data rather than constants, so a later version can change the resolution or the meter.
+Which combinations the staff can write follows from the note values it knows: a grid is
+writable when some value spans exactly one step. So the set is a growing one — finer
+values and tuplets widen it — rather than a fixed list.
 _Avoid_: resolution, size, layout, config, settings
 
 **Seed**:

@@ -88,9 +88,10 @@ export function decode(encoded: string | null | undefined): Pattern | null {
     beatValue: bytes[3] ?? 0,
     bars: bytes[4] ?? 0,
   };
-  // Which grids exist is the Pattern's question, not the format's. Four bytes decode to
-  // 65,536 grids and the app supports a fraction of them; the format's job is reading the
-  // bytes, so it asks rather than deciding, and a refusal is just another malformed input.
+  // Which grids exist is the Pattern's question, not the format's. Four bytes name any of
+  // four billion grids and the app supports a vanishing fraction of them; the format's job is
+  // reading the bytes, so it asks rather than deciding, and a refusal is just another
+  // malformed input.
   if (!isSupportedGrid(dimensions)) return null;
 
   const steps = totalSteps(dimensions);

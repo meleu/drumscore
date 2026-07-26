@@ -231,12 +231,12 @@ diverged — particularly its central rule, if the sweep taught us anything.
 
 ### Acceptance criteria
 
-- [ ] `CONTEXT.md`'s **Grid dimensions** entry says the writable set follows from the note
+- [x] `CONTEXT.md`'s **Grid dimensions** entry says the writable set follows from the note
       values, and coins no new term.
-- [ ] `CONTEXT.md`'s **Kit** entry no longer claims to be the one place the two halves meet.
-- [ ] ADR-0011 matches what was built, including the capacity numbers as implemented.
-- [ ] No other ADR is edited: ADR-0009 is narrowed by ADR-0011's record, not rewritten.
-- [ ] `pnpm verify` and `pnpm verify:visual` pass.
+- [x] `CONTEXT.md`'s **Kit** entry no longer claims to be the one place the two halves meet.
+- [x] ADR-0011 matches what was built, including the capacity numbers as implemented.
+- [x] No other ADR is edited: ADR-0009 is narrowed by ADR-0011's record, not rewritten.
+- [x] `pnpm verify` and `pnpm verify:visual` pass.
 
 ---
 

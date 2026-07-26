@@ -2,11 +2,11 @@
 
 **Grid dimensions** are data (ADR-0003), and the pattern codec was the only module with an
 opinion about which of them are real: a byte-plausibility check accepting any value from 1 to
-64 in all four fields. That is 65,536 grids, of which the app draws one. A hand-made link
-asking for three steps to a beat reaches the notation engine, finds no note value spanning a
-single step, and throws from inside the engine's splitting logic — from a line whose own
-comment calls it unreachable. A link asking for 64 in every field decodes to 262,144 steps
-and over a million grid cells.
+64 in all four fields. That is over sixteen million grids, of which the app draws one. A
+hand-made link asking for three steps to a beat reaches the notation engine, finds no note
+value spanning a single step, and throws from inside the engine's splitting logic — from a
+line whose own comment calls it unreachable. A link asking for 64 in every field decodes to
+262,144 steps and over 1.5 million grid cells.
 
 The Pattern now answers the question instead, through one predicate over grid dimensions, and
 the codec asks it after parsing the header rather than range-checking bytes. The codec's
@@ -20,10 +20,13 @@ moves out of the notation engine and into the notation model, beside the value u
 fact about, so that both the engine and the Pattern read one source. The engine keeps the
 work of choosing among values; it stops owning what the values are.
 
-Alongside it sits a capacity clause — bounds on total steps, bars and beats per bar — and it
-is a different kind of statement, labelled as such. It guards against a grid a browser cannot
-lay out. It is sized past a full-song transcription (roughly 120 bars) so that no planned
-feature has to move it, and it claims nothing about whether what it permits looks good.
+Alongside it sits a capacity clause — 4096 steps in total, 256 bars, 32 beats to a bar — and
+it is a different kind of statement, labelled as such. It guards against a grid a browser
+cannot lay out. 4096 steps is 256 bars of 4/4 sixteenths, about twice a full-song
+transcription (roughly 120 bars), so no planned feature has to move it, and it claims nothing
+about whether what it permits looks good. Beats per bar is bounded separately because the
+other two do not imply it: one bar of sixty beats at one step each is a tiny grid and an
+absurd meter.
 Making long scores readable means wrapping the staff and paging the grid, which is separate
 work.
 
@@ -77,8 +80,9 @@ vocabulary changes.
 
 **ADR-0003's outstanding request is closed.** It asked for "a test or fixture on a non-default
 grid" as the cheap way to make the claim real, and until now the project had neither — every
-test and all thirteen visual baselines use the default grid. The sweep covers the notation
-model, and one odd-meter fixture takes a non-default grid into a real browser.
+test and all thirteen visual baselines used the default grid. The sweep covers the notation
+model, and a fourteenth fixture — one bar of 7/8 at eighth-note beats — takes a non-default
+grid into a real browser.
 
 **The capacity numbers are the part not derived from anything.** They are a judgement about
 what a browser can lay out, not about music, and they are the clause most likely to look wrong
