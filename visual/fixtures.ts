@@ -81,6 +81,22 @@ export const FIXTURES: readonly Fixture[] = [
     hits: { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4] },
     variations: [['snare', 10, 'ghost']],
   },
+  // A flam on the backbeat, and a plain snare on the next one to read it against. The
+  // eighths above and the kick below are what make it say the grace has disturbed nothing:
+  // the hi-hat on the same step keeps its own line, and the kick under the second bar's
+  // downbeat still shares a column with the hands.
+  {
+    name: 'flam',
+    hits: { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], kick: [0, 8], snare: [12] },
+    variations: [['snare', 4, 'flam']],
+  },
+  // The same bar dragged rather than flammed: two grace notes under a beam where the flam
+  // has one flagged note, which is the whole of what tells them apart on the page.
+  {
+    name: 'drag',
+    hits: { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], kick: [0, 8], snare: [12] },
+    variations: [['snare', 4, 'drag']],
+  },
   {
     // The grid the thirty-second admitted: one bar of 4/4 with eight steps to the beat. No
     // control offers this resolution, so a crafted link is the only way a user reaches it,

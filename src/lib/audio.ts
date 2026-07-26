@@ -1,6 +1,6 @@
 /**
  * Audio engine: a thin adapter over Tone.js, holding no musical logic — it maps the
- * Pattern's on-cells onto synthesized voices and drives Tone's Transport.
+ * Pattern's struck cells onto synthesized voices and drives Tone's Transport.
  *
  * One synth per voice, so simultaneous hits sound together instead of stealing a
  * monophonic voice. The grid is a looping `Sequence` whose callback reads the *current*
@@ -9,6 +9,7 @@
 
 import {
   Filter,
+  getContext,
   getDestination,
   getDraw,
   getTransport,
@@ -18,7 +19,7 @@ import {
   Sequence,
   start,
 } from 'tone';
-import { HIT_LOUDNESS, KIT, type VoiceId } from './kit';
+import { KIT, strikesFor, type VoiceId } from './kit';
 import { hitAt, totalSteps, type Pattern } from './pattern';
 import type { Playback } from './sketchpad.svelte';
 
@@ -165,10 +166,16 @@ export class AudioEngine implements Playback {
 
     this.sequence = new Sequence<number>(
       (time, step) => {
+        // The floor for a grace ahead of the beat: the moment the speakers are already at.
+        const now = getContext().currentTime;
+
         // Read per pass, not per rebuild: a cell edited mid-loop is heard on the next one.
         for (const { id } of KIT) {
-          const hit = hitAt(this.pattern, id, step);
-          if (hit !== 'off') this.voices.triggers[id](time, HIT_LOUDNESS[hit]);
+          // A cell may sound as more than one strike — a flam's grace and its stroke. What
+          // they are and when they land is the Kit's answer, not this adapter's.
+          const strikes = strikesFor(hitAt(this.pattern, id, step), time, now);
+
+          for (const strike of strikes) this.voices.triggers[id](strike.time, strike.loudness);
         }
         // The callback fires ahead of the audible moment; Draw defers the highlight to it,
         // so the playhead lands in sync. The guard drops draws due after a stop.

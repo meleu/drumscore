@@ -107,6 +107,14 @@ The drums of one part struck at the same step, written as one note carrying seve
 noteheads.
 _Avoid_: stack, cluster, group, simultaneity
 
+**Grace group**:
+The small strikes written before a note and played just ahead of it: a flam's one, a
+drag's two. Belongs to the note rather than to a notehead, because one group is drawn
+ahead of the whole stem. It spells itself out — the note values, the beam, the absent
+slash and slur — so the convention is stated where it can be read, not left to the
+drawing library.
+_Avoid_: ornament, grace note, ruff, rudiment, acciaccatura, flourish
+
 **Beam group**:
 A run of consecutive flagged notes to be drawn under one beam instead of with separate
 flags. Never crosses a beat.

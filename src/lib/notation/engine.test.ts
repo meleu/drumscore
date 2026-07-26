@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GRACE_STRIKES } from '$lib/kit';
 import {
   createPattern,
   DEFAULT_DIMENSIONS,
@@ -18,6 +19,7 @@ import {
   type NotationEvent,
   type NotationMeasure,
   type NotationModel,
+  type NotationNote,
   type NotationPart,
   type Notehead,
   type NoteValue,
@@ -122,6 +124,16 @@ const RIDE: Notehead = { style: 'cross', position: { step: 'f', octave: 5 }, gho
 /** The same drum, struck quietly: what the staff wraps in parentheses. */
 function ghost(head: Notehead): Notehead {
   return { ...head, ghosted: true };
+}
+
+/** The note a part's first measure writes at one step. */
+function noteAt(pattern: Pattern, id: PartId, step: number): NotationNote {
+  const note = partOf(measureOf(pattern), id).events.find(
+    (event) => event.kind === 'note' && event.step === step,
+  );
+  if (note?.kind !== 'note') throw new Error(`the ${id} part has no note at step ${step}`);
+
+  return note;
 }
 
 /** The noteheads of the first note in a part's first measure. */
@@ -328,7 +340,15 @@ describe('parts', () => {
     expect(hands.events).toEqual([
       { kind: 'rest', step: 0, value: 'half', dots: 0, position: { step: 'b', octave: 4 } },
       { kind: 'rest', step: 8, value: 'quarter', dots: 0, position: { step: 'b', octave: 4 } },
-      { kind: 'note', step: 12, value: 'quarter', dots: 0, noteheads: [SNARE], accented: false },
+      {
+        kind: 'note',
+        step: 12,
+        value: 'quarter',
+        dots: 0,
+        noteheads: [SNARE],
+        accented: false,
+        grace: null,
+      },
     ]);
   });
 });
@@ -461,6 +481,84 @@ describe('ghost notes', () => {
     );
 
     expect(rhythmsOf(ghosted)).toEqual(rhythmsOf(plain));
+  });
+});
+
+/**
+ * What the grace group in front of a stroke contains. The convention is the thing being
+ * asserted: a flam is one unslashed eighth, a drag two unslashed thirty-seconds beamed
+ * together, neither slurred to the note it precedes.
+ */
+describe('flams and drags', () => {
+  /** The glyph without the ghosting: what a grace note carries. */
+  const snareHead = { style: SNARE.style, position: SNARE.position };
+
+  it('draws one unslashed eighth before a flammed stroke', () => {
+    const pattern = struck({ snare: [4] }, [['snare', 4, 'flam']]);
+
+    expect(noteAt(pattern, 'hands', 4).grace).toEqual({
+      notes: [{ value: 'eighth', notehead: snareHead }],
+      beamed: false,
+      slashed: false,
+      slurred: false,
+    });
+  });
+
+  it('draws two beamed thirty-seconds before a dragged stroke', () => {
+    const pattern = struck({ snare: [4] }, [['snare', 4, 'drag']]);
+
+    expect(noteAt(pattern, 'hands', 4).grace).toEqual({
+      notes: [
+        { value: 'thirtysecond', notehead: snareHead },
+        { value: 'thirtysecond', notehead: snareHead },
+      ],
+      beamed: true,
+      slashed: false,
+      slurred: false,
+    });
+  });
+
+  /**
+   * The gesture is stated twice — as note values here, as a count of strikes in the Kit —
+   * because the page and the ear need different things from it. They may not disagree: a
+   * drag heard as two and written as one is a chart that lies.
+   */
+  it.each<Hit>(['flam', 'drag'])('writes exactly the grace strikes a %s is played with', (hit) => {
+    const pattern = struck({ snare: [4] }, [['snare', 4, hit]]);
+
+    // The stroke itself is the last strike; the graces are what run ahead of it.
+    expect(noteAt(pattern, 'hands', 4).grace?.notes).toHaveLength(GRACE_STRIKES[hit]);
+  });
+
+  it.each<Hit>(['plain', 'accent', 'ghost'])('draws no grace before a %s stroke', (hit) => {
+    expect(noteAt(struck({ snare: [4] }, [['snare', 4, hit]]), 'hands', 4).grace).toBeNull();
+  });
+
+  /**
+   * The chord case, which is the common one: the grace belongs to the drum that plays it,
+   * so the hi-hat sharing the stem neither picks up a grace note nor moves the snare's off
+   * its line.
+   */
+  it('graces the flammed drum alone when it shares a stem', () => {
+    const pattern = struck({ snare: [0], closedHiHat: [0] }, [['snare', 0, 'flam']]);
+    const note = noteAt(pattern, 'hands', 0);
+
+    expect(note.noteheads).toEqual([SNARE, CLOSED_HI_HAT]);
+    expect(note.grace?.notes).toEqual([{ value: 'eighth', notehead: snareHead }]);
+  });
+
+  /** A gesture says how a stroke is played, never how long it is. */
+  it('leaves the rhythm, the rests, the dots and the beams exactly as they were', () => {
+    const hits = { closedHiHat: [0, 2, 4, 6, 8, 10, 12, 14], snare: [4, 7, 12], kick: [0, 8] };
+    const plain = toNotation(patternWith(hits));
+    const gestured = toNotation(
+      struck(hits, [
+        ['snare', 4, 'flam'],
+        ['snare', 7, 'drag'],
+      ]),
+    );
+
+    expect(rhythmsOf(gestured)).toEqual(rhythmsOf(plain));
   });
 });
 

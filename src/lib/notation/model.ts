@@ -52,6 +52,32 @@ export interface Notehead extends NoteheadGlyph {
   ghosted: boolean;
 }
 
+/** One small strike ahead of a note, on the line of the drum that plays it. */
+export interface GraceNote {
+  value: NoteValue;
+  notehead: NoteheadGlyph;
+}
+
+/**
+ * The strikes squeezed in before a note: a flam's one, a drag's two.
+ *
+ * Spelled out rather than named, so what the convention *is* — the values, the beam, the
+ * absent slash and slur — is asserted here in Node instead of living as a handful of flags
+ * inside the drawing library's adapter. The strikes take no time from the bar: they are
+ * played out of the beat's own room, which is why they hang off a note rather than sitting
+ * in the events list beside one.
+ */
+export interface GraceGroup {
+  /** Earliest first. Never empty. */
+  notes: GraceNote[];
+  /** Drawn under one beam. A lone grace note keeps its flag, as a lone note does. */
+  beamed: boolean;
+  /** The stroke through the stem. Drumset notation writes flams and drags without it. */
+  slashed: boolean;
+  /** The curve tying the group to its note. Standard drumset notation omits it. */
+  slurred: boolean;
+}
+
 export interface NotationNote {
   kind: 'note';
   /** Step index within its own measure. */
@@ -68,6 +94,12 @@ export interface NotationNote {
    * deliberately lossy — the Pattern keeps the full truth (ADR-0014).
    */
   accented: boolean;
+  /**
+   * The grace strikes drawn before this note, or `null` for the great majority carrying
+   * none. On the note, like the accent and for the same reason: one group is drawn ahead
+   * of the whole stem, whichever drum under it was flammed.
+   */
+  grace: GraceGroup | null;
 }
 
 export interface NotationRest {

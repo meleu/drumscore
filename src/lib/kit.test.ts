@@ -5,6 +5,7 @@ import {
   HIT_LABELS,
   HIT_LOUDNESS,
   KIT,
+  strikesFor,
   type Hit,
   type Variation,
   type VoiceId,
@@ -91,6 +92,15 @@ describe('the variations each voice accepts', () => {
     expect(ghosting.map(({ id }) => id)).toEqual(['snare']);
   });
 
+  it.each<Variation>(['flam', 'drag'])(
+    'offers a %s on the snare and on nothing else',
+    (gesture) => {
+      const gesturing = KIT.filter(({ id }) => accepts(id, gesture));
+
+      expect(gesturing.map(({ id }) => id)).toEqual(['snare']);
+    },
+  );
+
   it('gives the snare every variation and the crash none', () => {
     expect(accepts('snare', 'drag')).toBe(true);
     expect(accepts('crash', 'accent')).toBe(false);
@@ -130,6 +140,80 @@ describe('how hard each way of striking hits', () => {
 
   it('strikes a silent cell not at all', () => {
     expect(HIT_LOUDNESS.off).toBe(0);
+  });
+});
+
+/**
+ * The strikes one cell sounds as. A flam and a drag are gestures rather than single hits,
+ * and this is where that is settled — in seconds ahead of the stroke, with no synth and no
+ * transport anywhere near it.
+ */
+describe('the strikes a cell sounds as', () => {
+  /** Well into a run, so there is room to schedule ahead of the stroke. */
+  const TIME = 10;
+  const START = 0;
+
+  /** How far ahead of the stroke each strike lands, in the order they sound. */
+  function leadsOf(hit: Hit, time = TIME, earliest = START): number[] {
+    return strikesFor(hit, time, earliest).map((strike) => time - strike.time);
+  }
+
+  function loudnessesOf(hit: Hit, time = TIME, earliest = START): number[] {
+    return strikesFor(hit, time, earliest).map((strike) => strike.loudness);
+  }
+
+  /** The gap the gesture is built out of, taken from the shortest gesture there is. */
+  const [LEAD = 0] = leadsOf('flam');
+
+  it('sounds nothing for an empty cell', () => {
+    expect(strikesFor('off', TIME, START)).toEqual([]);
+  });
+
+  it.each<Hit>(['plain', 'accent', 'ghost'])('sounds a %s cell as the stroke alone', (hit) => {
+    expect(strikesFor(hit, TIME, START)).toEqual([{ time: TIME, loudness: HIT_LOUDNESS[hit] }]);
+  });
+
+  it('sounds a flam as one grace strike, then the stroke on the beat', () => {
+    expect(leadsOf('flam')).toEqual([LEAD, 0]);
+    expect(LEAD).toBeGreaterThan(0);
+  });
+
+  it('sounds a drag as two grace strikes, evenly spaced ahead of the stroke', () => {
+    const [first = 0, second = 0, ...rest] = leadsOf('drag');
+
+    expect(rest).toEqual([0]);
+    expect(second).toBeCloseTo(LEAD);
+    expect(first).toBeCloseTo(LEAD * 2);
+  });
+
+  it('plays the graces quietly and the stroke at its own weight', () => {
+    expect(loudnessesOf('flam')).toEqual([HIT_LOUDNESS.ghost, HIT_LOUDNESS.flam]);
+    expect(loudnessesOf('drag')).toEqual([
+      HIT_LOUDNESS.ghost,
+      HIT_LOUDNESS.ghost,
+      HIT_LOUDNESS.drag,
+    ]);
+  });
+
+  /**
+   * The gesture is a fixed span of milliseconds rather than a fraction of the step, so a
+   * flam is a flam at 40 BPM and at 240 BPM. All a tempo changes is when the stroke lands,
+   * which is the argument — so two wildly separated strokes must lead identically.
+   */
+  it('leads the stroke by the same gap wherever the stroke falls', () => {
+    const millisecondsBefore = (time: number): number[] =>
+      leadsOf('drag', time).map((lead) => Math.round(lead * 1000));
+
+    expect(millisecondsBefore(1)).toEqual(millisecondsBefore(1000));
+  });
+
+  /**
+   * A flam on the loop's first step wants its grace before the loop began. Nothing can be
+   * played in the past, so the graces pile up on the floor instead — late, but audible,
+   * and the stroke still lands on the beat.
+   */
+  it('schedules nothing before the earliest time it is given', () => {
+    expect(strikesFor('drag', START, START).map(({ time }) => time)).toEqual([START, START, START]);
   });
 });
 

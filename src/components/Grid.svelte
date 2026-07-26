@@ -1,6 +1,6 @@
 <script lang="ts">
   import HitMenu from './HitMenu.svelte';
-  import { DISPLAY_ORDER, HIT_LABELS, type Hit, type KitVoice } from '$lib/kit';
+  import { DISPLAY_ORDER, GRACE_STRIKES, HIT_LABELS, type Hit, type KitVoice } from '$lib/kit';
   import { hitAt, stepsPerBar, totalSteps, type Pattern, type VoiceId } from '$lib/pattern';
 
   interface Props {
@@ -38,6 +38,11 @@
       event.currentTarget as HTMLElement,
     );
   }
+
+  /** One pip per grace strike, so the cell counts what the ear will hear. */
+  function pipsFor(hit: Hit): number[] {
+    return [...Array(GRACE_STRIKES[hit]).keys()];
+  }
 </script>
 
 <div class="grid" style="--step-count: {steps.length}">
@@ -52,11 +57,13 @@
     <div class="label">{voice.label}</div>
     {#each steps as step (step)}
       {@const hit = hitAt(pattern, voice.id, step)}
+      {@const graces = pipsFor(hit)}
       <button
         type="button"
         class="cell"
         class:on={hit !== 'off'}
         class:ghost={hit === 'ghost'}
+        class:graced={graces.length > 0}
         class:beat={step % stepsPerBeat === 0}
         class:bar={step % barLength === 0}
         class:playing={step === currentStep}
@@ -70,9 +77,20 @@
         <!--
           The struck cell's block, and inside it the accent's own symbol — the staff's, so
           grid and sheet teach each other. Shape not shade throughout: the block shrinks for
-          a ghost and the mark is a glyph, so both survive at a cell's size and without
-          colour. The aria-label carries the variation to a screen reader.
+          a ghost, grows pips off its leading edge for a flam and a drag, and the accent's
+          mark is a glyph — so all four survive at a cell's size and without colour. The
+          aria-label carries the variation to a screen reader.
+
+          The pips sit before the block the way the grace notes sit before the stroke, and
+          there is one per strike: one for a flam, two for a drag.
         -->
+        {#if graces.length > 0}
+          <span class="pips" aria-hidden="true">
+            {#each graces as pip (pip)}
+              <span class="pip"></span>
+            {/each}
+          </span>
+        {/if}
         {#if hit !== 'off'}
           <span class="fill" aria-hidden="true">{hit === 'accent' ? '>' : ''}</span>
         {/if}
@@ -106,6 +124,8 @@
   }
 
   .cell {
+    /* The pips hang off the leading edge, in the room `.graced` opens for them. */
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -166,6 +186,33 @@
     width: 45%;
     height: 45%;
     background: color-mix(in srgb, var(--color-accent) 55%, var(--color-surface));
+  }
+
+  /*
+   * A flam and a drag carry their grace strikes as pips on the cell's leading edge, where
+   * the grace notes sit ahead of the stroke on the staff. The cell opens padding for them
+   * rather than letting the block cover them, so one pip and two are told apart by
+   * counting rather than by shade — and a flam is never mistaken for a ghost, which shrinks
+   * its block instead of growing anything beside it.
+   */
+  .cell.graced {
+    padding-left: 0.5rem;
+  }
+
+  .pips {
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    display: flex;
+    gap: 1px;
+    transform: translateY(-50%);
+  }
+
+  .pip {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--color-accent);
   }
 
   /* Playhead: a soft wash over the whole column, cells and count label. */

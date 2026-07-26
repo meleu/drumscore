@@ -5,6 +5,8 @@ import {
   Beam,
   Dot,
   Formatter,
+  GraceNote,
+  GraceNoteGroup,
   Modifier,
   Parenthesis,
   Renderer,
@@ -16,10 +18,11 @@ import {
 import type { SVGContext } from 'vexflow/core';
 import { notationFontsReady } from './fonts';
 import type {
+  GraceGroup,
   NotationEvent,
   NotationModel,
   NotationPart,
-  Notehead,
+  NoteheadGlyph,
   NoteheadStyle,
   NoteValue,
   StaffPosition,
@@ -74,8 +77,29 @@ const NOTEHEAD_GLYPHS: Record<NoteheadStyle, string> = {
   cross: '/x',
 };
 
-function keyOf({ style, position }: Notehead): string {
+function keyOf({ style, position }: NoteheadGlyph): string {
   return keyFor(position, NOTEHEAD_GLYPHS[style]);
+}
+
+/**
+ * The little notes crowded in before a stroke. Every decision in here was made by the
+ * engine: how many, what value each is, whether they are beamed, slashed or slurred, and
+ * which line they sit on. The only translation is into VexFlow's spelling of it.
+ */
+function toGraceNotes(grace: GraceGroup, stemDirection: StemDirection): GraceNoteGroup {
+  const notes = grace.notes.map(
+    ({ value, notehead }) =>
+      new GraceNote({
+        keys: [keyOf(notehead)],
+        duration: DURATION_CODES[value],
+        slash: grace.slashed,
+        stemDirection: STEM_DIRECTIONS[stemDirection],
+        clef: CLEF,
+      }),
+  );
+  const group = new GraceNoteGroup(notes, grace.slurred);
+
+  return grace.beamed ? group.beamNotes() : group;
 }
 
 /** VexFlow spells a rest as the value's code with an `r` suffix. */
@@ -94,6 +118,10 @@ function toStaveNote(event: NotationEvent, stemDirection: StemDirection): StaveN
   if (dots > 0) Dot.buildAndAttach([note], { all: true });
   if (!isRest && event.accented) {
     note.addModifier(new Articulation(ACCENT).setPosition(ACCENT_POSITIONS[stemDirection]));
+  }
+  // Ahead of the whole chord, so it goes on the note rather than on any one head.
+  if (!isRest && event.grace) {
+    note.addModifier(toGraceNotes(event.grace, stemDirection));
   }
   if (!isRest) {
     // Per head, by index — `Parenthesis.buildAndAttach` would bracket the whole chord, and

@@ -21,8 +21,8 @@ _see it as an actual music sheet_.
 
 Fundamental features I want to implement:
 
-- [ ] flams and drags
-- [ ] dynamics: accents and ghost notes
+- [x] flams and drags
+- [x] dynamics: accents and ghost notes
 - [ ] add more voices
   - [ ] tom 1
   - [ ] tom 2

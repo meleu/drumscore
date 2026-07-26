@@ -66,6 +66,63 @@ export const HIT_LOUDNESS: Record<Hit, number> = {
   drag: PLAIN_LOUDNESS,
 };
 
+/**
+ * How many quiet strikes are squeezed in ahead of the stroke: a flam's one, a drag's two.
+ * Exhaustive over the union, so a rudiment added to it is a compile error here until it
+ * says how it is played.
+ *
+ * Read by the grid, which draws a pip per grace strike, so the cell's mark counts what the
+ * ear hears. What the *staff* draws is the notation engine's business — a matching count in
+ * note values, which its own tests pin against this one.
+ */
+export const GRACE_STRIKES: Record<Hit, number> = {
+  off: 0,
+  plain: 0,
+  accent: 0,
+  ghost: 0,
+  flam: 1,
+  drag: 2,
+};
+
+/**
+ * How far ahead of the stroke each grace strike lands, in seconds.
+ *
+ * A duration, not a fraction of a step: the gesture is a physical one — the stick bouncing
+ * ahead of the beat — so it takes the same time at 40 BPM as at 240, and slowing the loop
+ * down to learn it never turns a flam into a written-out figure. A starting value, to be
+ * tuned by ear.
+ */
+const GRACE_LEAD = 0.035;
+
+/** One strike of one drum: when to play it, and how hard. */
+export interface Strike {
+  time: number;
+  loudness: number;
+}
+
+/**
+ * How a cell sounds, as the strikes that make it up: the graces ahead of the beat, then
+ * the stroke on it. The whole of what a variation does to playback, so the audio engine
+ * asks rather than assembles and stays the thin adapter it is.
+ *
+ * A grace is played at a ghost's loudness — a whisper against the stroke, which is what
+ * makes the gesture read as one thickened hit rather than as two notes.
+ *
+ * Nothing is scheduled before `earliest`: a flam on the loop's first step would want its
+ * grace in the past, and a grace pushed late is still heard where one dropped is not.
+ */
+export function strikesFor(hit: Hit, time: number, earliest: number): Strike[] {
+  const graces = GRACE_STRIKES[hit];
+  const strikes: Strike[] = [];
+
+  for (let ahead = graces; ahead > 0; ahead--) {
+    strikes.push({ time: Math.max(earliest, time - GRACE_LEAD * ahead), loudness: GHOST_LOUDNESS });
+  }
+  if (hit !== 'off') strikes.push({ time, loudness: HIT_LOUDNESS[hit] });
+
+  return strikes;
+}
+
 /** What every Kit row must state; the list below is checked against it. */
 interface KitRow {
   id: string;

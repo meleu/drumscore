@@ -1,8 +1,9 @@
-import { KIT, type KitVoice } from '$lib/kit';
+import { KIT, type Hit, type KitVoice } from '$lib/kit';
 import { hitAt, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
 import {
   VALUES_PER_WHOLE,
   type BeamGroup,
+  type GraceGroup,
   type NotationEvent,
   type NotationMeasure,
   type NotationModel,
@@ -176,6 +177,7 @@ interface Chord {
   step: number;
   noteheads: Notehead[];
   accented: boolean;
+  grace: GraceGroup | null;
 }
 
 /**
@@ -216,6 +218,51 @@ function noteheadsAt(pattern: Pattern, voices: readonly KitVoice[], at: number):
   return [...heads.values()].sort((a, b) => heightOf(a.position) - heightOf(b.position));
 }
 
+/** A gesture's grace strikes as the convention writes them, before a drum is named. */
+interface GraceStrokes extends Omit<GraceGroup, 'notes'> {
+  values: NoteValue[];
+}
+
+/**
+ * What each gesture is written as: the whole convention, as data. A flam is one unslashed
+ * eighth; a drag is two unslashed thirty-seconds under a beam. Neither is slurred to the
+ * stroke it precedes — the slur and the slash are melodic notation, and drumset charts
+ * write these without them.
+ *
+ * Exhaustive over the union, so a rudiment added to it is a compile error here until it
+ * says what it looks like.
+ */
+const GRACE_STROKES: Record<Hit, GraceStrokes | null> = {
+  off: null,
+  plain: null,
+  accent: null,
+  ghost: null,
+  flam: { values: ['eighth'], beamed: false, slashed: false, slurred: false },
+  drag: { values: ['thirtysecond', 'thirtysecond'], beamed: true, slashed: false, slurred: false },
+};
+
+/**
+ * The group in front of one chord, or null. The staff has one place for it — ahead of the
+ * whole stem — so the first drum of the part carrying a gesture supplies it, lossy in the
+ * same way the accent is and for the same reason, with the Pattern keeping what was meant
+ * (ADR-0014). The snare is the only drum whose row accepts a gesture, so there is nothing
+ * to lose today.
+ *
+ * The grace notes take that drum's own notehead, which is what puts them on its line.
+ */
+function graceAt(pattern: Pattern, voices: readonly KitVoice[], at: number): GraceGroup | null {
+  for (const { id, notehead } of voices) {
+    const strokes = GRACE_STROKES[hitAt(pattern, id, at)];
+    if (!strokes) continue;
+
+    const { values, ...shape } = strokes;
+
+    return { ...shape, notes: values.map((value) => ({ value, notehead })) };
+  }
+
+  return null;
+}
+
 /**
  * Accented if *any* drum struck there is. The staff has one place for the mark, so drums
  * under one stem cannot disagree on the page — an accented snare beside a plain hi-hat
@@ -235,7 +282,12 @@ function chordsIn(pattern: Pattern, part: Part, bar: number, barLength: number):
     const noteheads = noteheadsAt(pattern, voices, at);
 
     if (noteheads.length > 0) {
-      chords.push({ step, noteheads, accented: accentedAt(pattern, voices, at) });
+      chords.push({
+        step,
+        noteheads,
+        accented: accentedAt(pattern, voices, at),
+        grace: graceAt(pattern, voices, at),
+      });
     }
   }
 
@@ -309,6 +361,7 @@ function partFor(pattern: Pattern, part: Part, bar: number, tables: Tables): Not
       dots: stroke.dots,
       noteheads: chord.noteheads,
       accented: chord.accented,
+      grace: chord.grace,
     });
     filled = chord.step + stroke.steps;
   }
