@@ -1,16 +1,17 @@
 import { KIT, type KitVoice } from '$lib/kit';
 import { isHit, stepsPerBar, type GridDimensions, type Pattern } from '$lib/pattern';
-import type {
-  BeamGroup,
-  NotationEvent,
-  NotationMeasure,
-  NotationModel,
-  NotationPart,
-  Notehead,
-  NoteValue,
-  PartId,
-  StaffPosition,
-  StemDirection,
+import {
+  VALUES_PER_WHOLE,
+  type BeamGroup,
+  type NotationEvent,
+  type NotationMeasure,
+  type NotationModel,
+  type NotationPart,
+  type Notehead,
+  type NoteValue,
+  type PartId,
+  type StaffPosition,
+  type StemDirection,
 } from './model';
 
 /**
@@ -63,15 +64,6 @@ const PARTS: readonly Part[] = [
 function voicesOf(part: Part): readonly KitVoice[] {
   return KIT.filter((voice) => voice.part === part.id);
 }
-
-/** How many of each note value make a whole note. */
-const VALUES_PER_WHOLE: readonly [NoteValue, number][] = [
-  ['whole', 1],
-  ['half', 2],
-  ['quarter', 4],
-  ['eighth', 8],
-  ['sixteenth', 16],
-];
 
 interface Duration {
   value: NoteValue;

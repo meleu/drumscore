@@ -8,6 +8,23 @@
 
 export type NoteValue = 'whole' | 'half' | 'quarter' | 'eighth' | 'sixteenth';
 
+/**
+ * How many of each note value make a whole note — the fact about the union above that says
+ * how long each of its members is, and so the whole of what the staff can write.
+ *
+ * It lives here, beside the union, rather than inside the engine that consumes it, because
+ * the engine is not the only thing that needs to know. The engine reads it to build the
+ * tables it chooses among; the Pattern reads it to ask which grids the staff can write. A
+ * value added here widens both answers at once.
+ */
+export const VALUES_PER_WHOLE: readonly (readonly [NoteValue, number])[] = [
+  ['whole', 1],
+  ['half', 2],
+  ['quarter', 4],
+  ['eighth', 8],
+  ['sixteenth', 16],
+];
+
 export type DiatonicStep = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g';
 
 /**
